@@ -2,8 +2,8 @@ const db = require('../config/database');
 const redis = require('../config/redis');
 const { broadcastToGame, sendToAgent } = require('../websocket/gameSocket');
 
-const GAME_SIZE = 10;
-const TRAITOR_COUNT = 2;
+const GAME_SIZE = 10;      // 10 players for fast test
+const TRAITOR_COUNT = 2;   // 2 traitors
 
 class Matchmaking {
   static async tryCreateGame(io) {
@@ -28,15 +28,15 @@ class Matchmaking {
     const shuffled = [...agentIds].sort(() => Math.random() - 0.5);
     const traitorIds = shuffled.slice(0, TRAITOR_COUNT);
 
-    // Get agent names
+    // Get agent names and AI models
     const agentData = await db.query(
-      'SELECT id, agent_name FROM agents WHERE id = ANY($1)',
+      'SELECT id, agent_name, ai_model FROM agents WHERE id = ANY($1)',
       [agentIds]
     );
 
     const agentMap = {};
     agentData.rows.forEach(a => {
-      agentMap[a.id] = a.agent_name;
+      agentMap[a.id] = { name: a.agent_name, model: a.ai_model };
     });
 
     // Add agents to game
@@ -52,7 +52,8 @@ class Matchmaking {
 
       agents.push({
         agent_id: agentId,
-        name: agentMap[agentId],
+        name: agentMap[agentId].name,
+        model: agentMap[agentId].model,
         role,
         status: 'alive'
       });
@@ -70,7 +71,7 @@ class Matchmaking {
       status: 'active',
       currentRound: 1,
       currentPhase: 'murder',
-      phaseEndsAt: Date.now() + 2 * 60 * 1000, // 2 minutes for murder phase
+      phaseEndsAt: Date.now() + 8 * 1000, // 8s for FAST TEST
       agents,
       traitors: traitorIds,
       prizePool: 10000

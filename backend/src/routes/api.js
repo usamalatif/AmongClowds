@@ -8,7 +8,7 @@ const { authenticateAgent, generateApiKey, generateClaimToken } = require('../mi
 
 router.post('/agents/register', async (req, res) => {
   try {
-    const { agent_name, owner_x_handle } = req.body;
+    const { agent_name, owner_x_handle, ai_model } = req.body;
 
     if (!agent_name || agent_name.length < 3) {
       return res.status(400).json({ error: 'Agent name must be at least 3 characters' });
@@ -28,16 +28,17 @@ router.post('/agents/register', async (req, res) => {
     const apiKey = generateApiKey();
     const claimToken = generateClaimToken();
 
-    // Create agent
+    // Create agent with optional AI model
     const result = await db.query(
-      `INSERT INTO agents (agent_name, api_key, owner_x_handle, claim_token, claimed, created_at)
-       VALUES ($1, $2, $3, $4, false, NOW()) RETURNING id`,
-      [agent_name, apiKey, owner_x_handle || null, claimToken]
+      `INSERT INTO agents (agent_name, api_key, owner_x_handle, claim_token, claimed, ai_model, created_at)
+       VALUES ($1, $2, $3, $4, false, $5, NOW()) RETURNING id`,
+      [agent_name, apiKey, owner_x_handle || null, claimToken, ai_model || null]
     );
 
     res.json({
       agent_id: result.rows[0].id,
       api_key: apiKey,
+      ai_model: ai_model || null,
       claim_url: `${process.env.FRONTEND_URL || 'https://agenttraitors.com'}/claim/${claimToken}`,
       message: 'Have your human owner visit the claim URL to verify ownership via X (Twitter)'
     });
@@ -87,6 +88,54 @@ router.get('/agents/:id', async (req, res) => {
     res.json(result.rows[0]);
   } catch (error) {
     res.status(500).json({ error: 'Failed to get agent' });
+  }
+});
+
+// Get agent by name (for profile page)
+router.get('/agents/name/:name', async (req, res) => {
+  try {
+    const result = await db.query(
+      `SELECT id, agent_name, ai_model, total_games, games_won, elo_rating,
+              games_as_traitor, traitor_wins, games_as_innocent, innocent_wins,
+              current_streak, best_streak, unclaimed_points,
+              COALESCE((SELECT SUM(unclaimed_points) FROM agents WHERE agent_name = $1), 0) as total_points,
+              CASE WHEN total_games > 0 THEN ROUND((games_won::numeric / total_games) * 100) ELSE 0 END as win_rate,
+              created_at
+       FROM agents WHERE agent_name = $1
+       ORDER BY created_at DESC LIMIT 1`,
+      [req.params.name]
+    );
+
+    if (result.rows.length === 0) {
+      return res.status(404).json({ error: 'Agent not found' });
+    }
+
+    res.json(result.rows[0]);
+  } catch (error) {
+    console.error('Failed to get agent by name:', error);
+    res.status(500).json({ error: 'Failed to get agent' });
+  }
+});
+
+// Get agent's game history (placeholder - game_participants table not yet implemented)
+router.get('/agents/name/:name/games', async (req, res) => {
+  try {
+    // Check if agent exists
+    const agentResult = await db.query(
+      `SELECT id FROM agents WHERE agent_name = $1 ORDER BY created_at DESC LIMIT 1`,
+      [req.params.name]
+    );
+
+    if (agentResult.rows.length === 0) {
+      return res.status(404).json({ error: 'Agent not found' });
+    }
+
+    // Game history tracking not yet implemented - return empty array
+    // TODO: Add game_participants table to track per-game player data
+    res.json([]);
+  } catch (error) {
+    console.error('Failed to get agent games:', error);
+    res.status(500).json({ error: 'Failed to get agent games' });
   }
 });
 
@@ -149,13 +198,32 @@ router.get('/lobby/status', async (req, res) => {
   try {
     const queueSize = await redis.zCard('lobby:queue');
     const activeGames = await redis.lLen('games:active');
+    
+    // Get queue members with their names
+    const agentIds = await redis.zRange('lobby:queue', 0, -1);
+    let queueMembers = [];
+    
+    if (agentIds.length > 0) {
+      const placeholders = agentIds.map((_, i) => `$${i + 1}`).join(',');
+      const result = await db.query(
+        `SELECT id, agent_name FROM agents WHERE id IN (${placeholders})`,
+        agentIds
+      );
+      // Maintain queue order
+      queueMembers = agentIds.map(id => {
+        const agent = result.rows.find(a => a.id === id);
+        return agent ? { id: agent.id, name: agent.agent_name } : null;
+      }).filter(Boolean);
+    }
 
     res.json({
       queueSize,
       activeGames,
-      nextGameIn: queueSize >= 10 ? 0 : null
+      nextGameIn: queueSize >= 10 ? 0 : null,
+      queueMembers
     });
   } catch (error) {
+    console.error('Lobby status error:', error);
     res.status(500).json({ error: 'Failed to get status' });
   }
 });
@@ -187,6 +255,27 @@ router.get('/lobby/games', async (req, res) => {
   }
 });
 
+// Get game history (finished games)
+router.get('/games/history', async (req, res) => {
+  try {
+    const limit = parseInt(req.query.limit) || 20;
+    const result = await db.query(
+      `SELECT id, status, winner, current_round as rounds, created_at, finished_at
+       FROM games
+       WHERE status = 'finished'
+       ORDER BY finished_at DESC NULLS LAST
+       LIMIT $1`,
+      [limit]
+    );
+    // Add default player count
+    const games = result.rows.map(g => ({ ...g, players: 10 }));
+    res.json(games);
+  } catch (error) {
+    console.error('History error:', error);
+    res.status(500).json({ error: 'Failed to get game history' });
+  }
+});
+
 // ========== GAME ACTIONS ==========
 
 router.get('/game/:id', async (req, res) => {
@@ -199,15 +288,37 @@ router.get('/game/:id', async (req, res) => {
     const state = JSON.parse(cached);
 
     // Hide traitor info for public view
+    // Calculate points for finished games if not already set
+    let pointsPerWinner = 0;
+    if (state.status === 'finished' && state.winner) {
+      const winningRole = state.winner === 'innocents' ? 'innocent' : 'traitor';
+      const winners = state.agents.filter(a => a.role === winningRole && a.status === 'alive');
+      pointsPerWinner = Math.floor((state.prizePool || 10000) / Math.max(winners.length, 1));
+    }
+
     const publicState = {
-      ...state,
-      agents: state.agents.map(a => ({
-        id: a.agent_id,
-        name: a.name,
-        status: a.status,
-        // Only show role if game is over or agent is dead
-        role: state.status === 'finished' || a.status !== 'alive' ? a.role : undefined
-      }))
+      id: state.id,
+      status: state.status,
+      currentRound: state.currentRound,
+      currentPhase: state.currentPhase,
+      phaseEndsAt: state.phaseEndsAt,
+      prizePool: state.prizePool,
+      winner: state.winner,
+      agents: state.agents.map(a => {
+        const winningRole = state.winner === 'innocents' ? 'innocent' : 'traitor';
+        const isWinner = state.status === 'finished' && a.role === winningRole && a.status === 'alive';
+        return {
+          id: a.agent_id,
+          name: a.name,
+          model: a.model, // Show AI model for spectators
+          status: a.status,
+          // Only show role if game is over or agent is dead
+          role: state.status === 'finished' || a.status !== 'alive' ? a.role : undefined,
+          // Calculate points earned for finished games
+          pointsEarned: state.status === 'finished' ? (a.pointsEarned || (isWinner ? pointsPerWinner : 0)) : undefined
+        };
+      })
+      // traitors array is intentionally excluded
     };
 
     res.json(publicState);
@@ -251,7 +362,9 @@ router.post('/game/:id/chat', authenticateAgent, async (req, res) => {
 
     // Broadcast
     const io = req.app.get('io');
+    const messageId = `${req.params.id}-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
     const chatMessage = {
+      messageId,
       agentId,
       agentName: agent.name,
       message,
@@ -504,12 +617,16 @@ router.get('/leaderboard/points', async (req, res) => {
   try {
     const limit = parseInt(req.query.limit) || 50;
     const result = await db.query(
-      `SELECT id, agent_name, unclaimed_points +
+      `SELECT id, agent_name, ai_model, unclaimed_points +
               (SELECT COALESCE(SUM(points_amount), 0) FROM token_claims WHERE agent_id = agents.id AND status = 'completed') as total_points,
-              elo_rating, total_games, games_won,
+              elo_rating, total_games, games_won, current_streak, best_streak,
               CASE WHEN total_games > 0 THEN ROUND(games_won::numeric / total_games * 100) ELSE 0 END as win_rate
        FROM agents
-       ORDER BY total_points DESC
+       ORDER BY 
+         total_games > 0 DESC,
+         unclaimed_points DESC,
+         CASE WHEN total_games > 0 THEN games_won::numeric / total_games ELSE 0 END DESC,
+         games_won DESC
        LIMIT $1`,
       [limit]
     );
@@ -527,7 +644,7 @@ router.get('/leaderboard/elo', async (req, res) => {
   try {
     const limit = parseInt(req.query.limit) || 50;
     const result = await db.query(
-      `SELECT id, agent_name, elo_rating, total_games, games_won,
+      `SELECT id, agent_name, ai_model, elo_rating, total_games, games_won,
               CASE WHEN total_games > 0 THEN ROUND(games_won::numeric / total_games * 100) ELSE 0 END as win_rate
        FROM agents
        WHERE total_games >= 5
@@ -545,6 +662,33 @@ router.get('/leaderboard/elo', async (req, res) => {
   }
 });
 
+// Leaderboard by AI model
+router.get('/leaderboard/models', async (req, res) => {
+  try {
+    const result = await db.query(
+      `SELECT ai_model, 
+              COUNT(*) as agent_count,
+              SUM(total_games) as total_games,
+              SUM(games_won) as total_wins,
+              CASE WHEN SUM(total_games) > 0 
+                   THEN ROUND(SUM(games_won)::numeric / SUM(total_games) * 100) 
+                   ELSE 0 END as win_rate,
+              ROUND(AVG(elo_rating)) as avg_elo
+       FROM agents
+       WHERE ai_model IS NOT NULL AND total_games > 0
+       GROUP BY ai_model
+       ORDER BY win_rate DESC, total_games DESC`
+    );
+
+    res.json(result.rows.map((row, i) => ({
+      rank: i + 1,
+      ...row
+    })));
+  } catch (error) {
+    res.status(500).json({ error: 'Failed to get model leaderboard' });
+  }
+});
+
 // ========== STATS ==========
 
 router.get('/stats', async (req, res) => {
@@ -553,16 +697,29 @@ router.get('/stats', async (req, res) => {
     const gamesToday = await db.query(
       "SELECT COUNT(*) FROM games WHERE created_at > NOW() - INTERVAL '24 hours'"
     );
-    const pointsClaimed = await db.query(
-      "SELECT COALESCE(SUM(points_amount), 0) as total FROM token_claims WHERE status = 'completed'"
+    const pointsEarned = await db.query(
+      "SELECT COALESCE(SUM(unclaimed_points), 0) as total FROM agents"
+    );
+    const hotStreak = await db.query(
+      "SELECT agent_name, current_streak FROM agents WHERE current_streak > 0 ORDER BY current_streak DESC LIMIT 1"
+    );
+    const bestStreak = await db.query(
+      "SELECT agent_name, best_streak FROM agents ORDER BY best_streak DESC LIMIT 1"
+    );
+    const totalGames = await db.query(
+      "SELECT COUNT(*) FROM games WHERE status = 'finished'"
     );
 
     res.json({
       totalAgents: parseInt(agents.rows[0].count),
       gamesToday: parseInt(gamesToday.rows[0].count),
-      totalPointsClaimed: parseInt(pointsClaimed.rows[0].total)
+      totalPointsEarned: parseInt(pointsEarned.rows[0].total) || 0,
+      totalGames: parseInt(totalGames.rows[0].count),
+      hotStreak: hotStreak.rows[0] || null,
+      bestStreak: bestStreak.rows[0] || null
     });
   } catch (error) {
+    console.error('Stats error:', error);
     res.status(500).json({ error: 'Failed to get stats' });
   }
 });

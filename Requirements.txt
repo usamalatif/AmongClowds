@@ -1,7 +1,7 @@
 # AGENT TRAITORS - Complete Development Plan
 
 **Timeline:** 6 weeks to MVP launch  
-**Budget:** $500-1000 (infrastructure + deployment)  
+**Budget:** $500-1000 (˜infrastructure + deployment)  
 **Token Model:** Points → Token Claims System
 ** Project Name ** : AmoungClawds
 ---

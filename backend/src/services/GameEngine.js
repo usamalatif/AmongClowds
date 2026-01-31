@@ -6,10 +6,10 @@ const { broadcastToGame, sendToTraitors } = require('../websocket/gameSocket');
 // Discussion-focused game flow: Murder → Discussion → Voting → Reveal
 // Discussion is the main mechanic where agents collaborate/deceive
 const PHASES = {
-  murder: { duration: 1 * 60 * 1000, next: 'discussion' },      // 1 min - Traitors secretly choose victim
-  discussion: { duration: 5 * 60 * 1000, next: 'voting' },      // 5 min - THE MAIN EVENT - All agents discuss
-  voting: { duration: 3 * 60 * 1000, next: 'reveal' },          // 3 min - Everyone votes who to banish
-  reveal: { duration: 1 * 60 * 1000, next: 'murder' }           // 1 min - Role revealed, react to results
+  murder: { duration: 45 * 1000, next: 'discussion' },      // 45s - Production
+  discussion: { duration: 2 * 60 * 1000, next: 'voting' },  // 2min - Production
+  voting: { duration: 60 * 1000, next: 'reveal' },          // 1min - Production
+  reveal: { duration: 15 * 1000, next: 'murder' }           // 15s - Production
 };
 
 // No max rounds - game continues until one side is eliminated
@@ -229,8 +229,8 @@ class GameEngine extends EventEmitter {
     this.state.status = 'finished';
     this.state.currentPhase = 'ended';
 
-    // Calculate points
-    const winningRole = this.state.winner;
+    // Calculate points - convert plural winner to singular role
+    const winningRole = this.state.winner === 'innocents' ? 'innocent' : 'traitor';
     const winners = this.state.agents.filter(a => a.role === winningRole && a.status === 'alive');
     const pointsPerWinner = Math.floor(this.state.prizePool / Math.max(winners.length, 1));
 
@@ -254,7 +254,9 @@ class GameEngine extends EventEmitter {
            games_as_traitor = games_as_traitor + $3,
            traitor_wins = traitor_wins + $4,
            games_as_innocent = games_as_innocent + $5,
-           innocent_wins = innocent_wins + $6
+           innocent_wins = innocent_wins + $6,
+           current_streak = CASE WHEN $1 = 1 THEN current_streak + 1 ELSE 0 END,
+           best_streak = CASE WHEN $1 = 1 AND current_streak + 1 > best_streak THEN current_streak + 1 ELSE best_streak END
          WHERE id = $7`,
         [
           isWinner ? 1 : 0,
@@ -282,13 +284,16 @@ class GameEngine extends EventEmitter {
         name: a.name,
         role: a.role,
         status: a.status,
+        model: a.model,
         pointsEarned: a.role === winningRole && a.status === 'alive' ? pointsPerWinner : 0
       }))
     });
   }
 
   async saveState() {
-    await redis.set(`game:${this.gameId}`, JSON.stringify(this.state), { EX: 7200 });
+    // 10 minutes TTL for finished games, 2 hours for active games
+    const ttl = this.state.status === 'finished' ? 600 : 7200;
+    await redis.set(`game:${this.gameId}`, JSON.stringify(this.state), { EX: ttl });
 
     await db.query(
       `UPDATE games SET current_round = $1, current_phase = $2 WHERE id = $3`,

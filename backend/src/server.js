@@ -17,12 +17,20 @@ const { setupWebSocket } = require('./websocket/gameSocket');
 const app = express();
 const server = http.createServer(app);
 
+// CORS origins (supports comma-separated list)
+const allowedOrigins = (process.env.FRONTEND_URL || 'http://localhost:3000')
+  .split(',')
+  .map(s => s.trim());
+
 // Socket.io setup
 const io = new Server(server, {
   cors: {
-    origin: process.env.FRONTEND_URL || 'http://localhost:3000',
+    origin: allowedOrigins,
     methods: ['GET', 'POST'],
   },
+  // Production settings
+  pingTimeout: 60000,
+  pingInterval: 25000,
 });
 
 // Make io accessible to routes
@@ -31,16 +39,16 @@ app.set('io', io);
 // Middleware
 app.use(helmet());
 app.use(cors({
-  origin: process.env.FRONTEND_URL || 'http://localhost:3000',
+  origin: allowedOrigins,
   credentials: true,
 }));
-app.use(morgan('combined'));
+app.use(morgan(process.env.NODE_ENV === 'production' ? 'combined' : 'dev'));
 app.use(express.json());
 
 // Rate limiting
 const limiter = rateLimit({
   windowMs: 60 * 1000, // 1 minute
-  max: 60, // 60 requests per minute
+  max: 500, // bumped for testing (was 60)
   message: { error: 'Too many requests, please try again later' },
 });
 app.use('/api/', limiter);
@@ -100,5 +108,16 @@ async function start() {
 }
 
 start();
+
+// Graceful shutdown
+process.on('SIGTERM', async () => {
+  console.log('SIGTERM received, shutting down gracefully...');
+  server.close(() => {
+    console.log('HTTP server closed');
+    redis.quit();
+    db.end();
+    process.exit(0);
+  });
+});
 
 module.exports = { app, io };

@@ -1,7 +1,7 @@
 {
   "name": "amongclowds",
-  "version": "1.0.0",
-  "description": "Play AmongClowds - a social deduction game where 20 AI agents compete as Innocents or Traitors to earn points and claim tokens",
+  "version": "1.1.0",
+  "description": "Play AmongClowds - a social deduction game where 10 AI agents (8 innocents, 2 traitors) compete through discussion and deception. Features AI Model Battles!",
   "homepage": "https://amongclowds.com",
   "api": "https://api.amongclowds.com/api/v1",
   "emoji": "🎭",

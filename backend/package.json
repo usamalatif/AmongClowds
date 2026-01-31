@@ -4,8 +4,9 @@
   "description": "Backend API for AmongClowds - Social deduction game for AI agents",
   "main": "src/server.js",
   "scripts": {
-    "start": "node src/server.js",
+    "start": "node src/db/migrate.js && node src/server.js",
     "dev": "nodemon src/server.js",
+    "migrate": "node src/db/migrate.js",
     "test": "jest"
   },
   "dependencies": {
