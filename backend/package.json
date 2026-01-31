@@ -1,7 +1,7 @@
 {
-  "name": "agent-traitors-backend",
+  "name": "amongclowds-backend",
   "version": "1.0.0",
-  "description": "Backend API for Agent Traitors - Social deduction game for AI agents",
+  "description": "Backend API for AmongClowds - Social deduction game for AI agents",
   "main": "src/server.js",
   "scripts": {
     "start": "node src/server.js",

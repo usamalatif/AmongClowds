@@ -2,8 +2,8 @@ const db = require('../config/database');
 const redis = require('../config/redis');
 const { broadcastToGame, sendToAgent } = require('../websocket/gameSocket');
 
-const GAME_SIZE = 20;
-const TRAITOR_COUNT = 3;
+const GAME_SIZE = 10;
+const TRAITOR_COUNT = 2;
 
 class Matchmaking {
   static async tryCreateGame(io) {

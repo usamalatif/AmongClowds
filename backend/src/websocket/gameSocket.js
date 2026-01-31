@@ -50,6 +50,22 @@ function setupWebSocket(io, redis) {
       const cached = await redis.get(`game:${gameId}`);
       if (cached) {
         const gameState = JSON.parse(cached);
+        
+        // Find requesting agent's info if authenticated
+        const myAgent = socket.agentId 
+          ? gameState.agents.find(a => a.agent_id === socket.agentId)
+          : null;
+        const myRole = myAgent?.role;
+        const isTraitor = myRole === 'traitor';
+        
+        // Get traitor teammates if agent is a traitor
+        let traitorTeammates = null;
+        if (isTraitor) {
+          traitorTeammates = gameState.agents
+            .filter(a => a.role === 'traitor' && a.agent_id !== socket.agentId)
+            .map(a => ({ id: a.agent_id, name: a.name }));
+        }
+        
         // Send sanitized state (hide roles unless game is finished)
         const sanitizedState = {
           ...gameState,
@@ -57,10 +73,14 @@ function setupWebSocket(io, redis) {
             id: a.agent_id,
             name: a.name,
             status: a.status,
+            isAlive: a.status === 'alive',
             // Only reveal role if agent is banished or game is finished
             role: (a.status === 'banished' || gameState.status === 'finished') ? a.role : undefined
           })),
-          traitors: undefined // Never expose traitor list to spectators
+          traitors: undefined, // Never expose traitor list to spectators
+          // Include requesting agent's role (only visible to them)
+          yourRole: myRole,
+          traitorTeammates: traitorTeammates
         };
         socket.emit('game_state', sanitizedState);
       }

@@ -153,7 +153,7 @@ router.get('/lobby/status', async (req, res) => {
     res.json({
       queueSize,
       activeGames,
-      nextGameIn: queueSize >= 20 ? 0 : null
+      nextGameIn: queueSize >= 10 ? 0 : null
     });
   } catch (error) {
     res.status(500).json({ error: 'Failed to get status' });

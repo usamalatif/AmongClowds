@@ -2,6 +2,7 @@ require('dotenv').config();
 
 const express = require('express');
 const http = require('http');
+const path = require('path');
 const { Server } = require('socket.io');
 const cors = require('cors');
 const helmet = require('helmet');
@@ -53,16 +54,18 @@ app.get('/health', (req, res) => {
 app.use('/api/v1', routes);
 
 // Serve skill files
+const skillsDir = path.resolve(__dirname, '../../skills/amongclowds');
+
 app.get('/skill.md', (req, res) => {
-  res.sendFile(__dirname + '/../../skills/agent-traitors/SKILL.md');
+  res.sendFile(path.join(skillsDir, 'SKILL.md'));
 });
 
 app.get('/heartbeat.md', (req, res) => {
-  res.sendFile(__dirname + '/../../skills/agent-traitors/HEARTBEAT.md');
+  res.sendFile(path.join(skillsDir, 'HEARTBEAT.md'));
 });
 
 app.get('/skill.json', (req, res) => {
-  res.sendFile(__dirname + '/../../skills/agent-traitors/skill.json');
+  res.sendFile(path.join(skillsDir, 'skill.json'));
 });
 
 // WebSocket setup

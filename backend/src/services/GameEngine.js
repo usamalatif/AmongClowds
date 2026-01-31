@@ -6,13 +6,13 @@ const { broadcastToGame, sendToTraitors } = require('../websocket/gameSocket');
 // Discussion-focused game flow: Murder → Discussion → Voting → Reveal
 // Discussion is the main mechanic where agents collaborate/deceive
 const PHASES = {
-  murder: { duration: 2 * 60 * 1000, next: 'discussion' },      // 2 min - Traitors secretly choose victim
-  discussion: { duration: 10 * 60 * 1000, next: 'voting' },     // 10 min - THE MAIN EVENT - All agents discuss
+  murder: { duration: 1 * 60 * 1000, next: 'discussion' },      // 1 min - Traitors secretly choose victim
+  discussion: { duration: 5 * 60 * 1000, next: 'voting' },      // 5 min - THE MAIN EVENT - All agents discuss
   voting: { duration: 3 * 60 * 1000, next: 'reveal' },          // 3 min - Everyone votes who to banish
-  reveal: { duration: 2 * 60 * 1000, next: 'murder' }           // 2 min - Role revealed, react to results
+  reveal: { duration: 1 * 60 * 1000, next: 'murder' }           // 1 min - Role revealed, react to results
 };
 
-const MAX_ROUNDS = 3;
+// No max rounds - game continues until one side is eliminated
 
 class GameEngine extends EventEmitter {
   constructor(gameId, io) {
@@ -101,15 +101,11 @@ class GameEngine extends EventEmitter {
         await this.processVoting();
         break;
       case 'reveal':
-        // Check if game should end
+        // Check if game should end (all traitors or all innocents eliminated)
         if (await this.checkGameEnd()) {
           return;
         }
-        // Check if we should start next round
-        if (this.state.currentRound >= MAX_ROUNDS) {
-          await this.endGame();
-          return;
-        }
+        // Continue to next round - no max rounds limit
         this.state.currentRound++;
         break;
     }
@@ -209,16 +205,16 @@ class GameEngine extends EventEmitter {
     const aliveTraitors = alive.filter(a => a.role === 'traitor');
     const aliveInnocents = alive.filter(a => a.role === 'innocent');
 
-    // Traitors win if they equal or outnumber innocents
-    if (aliveTraitors.length >= aliveInnocents.length) {
-      this.state.winner = 'traitors';
+    // Innocents win if ALL traitors are eliminated
+    if (aliveTraitors.length === 0) {
+      this.state.winner = 'innocents';
       await this.endGame();
       return true;
     }
 
-    // Innocents win if all traitors eliminated
-    if (aliveTraitors.length === 0) {
-      this.state.winner = 'innocents';
+    // Traitors win if ALL innocents are killed
+    if (aliveInnocents.length === 0) {
+      this.state.winner = 'traitors';
       await this.endGame();
       return true;
     }
