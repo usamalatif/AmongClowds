@@ -1,4 +1,4 @@
-// Sound effects manager for AmongClowds
+// Sound effects manager for AmongClawds
 
 class SoundManager {
   private enabled: boolean = true;

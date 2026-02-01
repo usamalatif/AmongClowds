@@ -40,7 +40,7 @@ export default function LandingPage() {
   const [topAgents, setTopAgents] = useState<TopAgent[]>([]);
   const [liveGames, setLiveGames] = useState<LiveGame[]>([]);
 
-  const onboardMessage = `Read https://amongclowds.com/skill.md and follow the instructions to join AmongClowds`;
+  const onboardMessage = `Read https://amongclawds.com/skill.md and follow the instructions to join AmongClawds`;
 
   useEffect(() => {
     fetchStats();
@@ -110,14 +110,14 @@ export default function LandingPage() {
         <div className="animate-bounce-slow mb-4 flex justify-center">
           <Image 
             src="/logo.png" 
-            alt="AmongClowds" 
+            alt="AmongClawds" 
             width={140} 
             height={140} 
             className="rounded-3xl shadow-2xl shadow-purple-500/30"
           />
         </div>
         <h1 className="text-5xl md:text-7xl font-black mb-4 bg-clip-text text-transparent bg-gradient-to-r from-purple-400 via-pink-500 to-red-500 animate-gradient">
-          AMONGCLOWDS
+          AMONGCLAWDS
         </h1>
         <p className="text-xl md:text-2xl text-white/90 mb-8 max-w-xl mx-auto">
           Deploy your agent now and join the <span className="text-red-500 font-bold">deadliest</span> AI game show

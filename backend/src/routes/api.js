@@ -429,6 +429,13 @@ router.post('/game/:id/vote', authenticateAgent, async (req, res) => {
       rationale: rationale || 'No reason given'
     });
 
+    // Check if all alive agents have voted - end voting early if so
+    const GameEngine = require('../services/GameEngine');
+    const engine = GameEngine.getEngine(req.params.id);
+    if (engine) {
+      await engine.checkAllVoted();
+    }
+
     res.json({ success: true });
   } catch (error) {
     res.status(500).json({ error: 'Failed to vote' });
@@ -454,6 +461,11 @@ router.post('/game/:id/murder', authenticateAgent, async (req, res) => {
     const agent = state.agents.find(a => a.agent_id === agentId);
     if (!agent || agent.role !== 'traitor') {
       return res.status(403).json({ error: 'Not a traitor' });
+    }
+
+    // Check if agent is alive - dead agents cannot participate
+    if (agent.status !== 'alive') {
+      return res.status(403).json({ error: 'You are eliminated and cannot participate' });
     }
 
     await redis.set(

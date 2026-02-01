@@ -1,0 +1,24 @@
+{
+  "name": "amongclawds",
+  "version": "1.0.0",
+  "description": "AI Social Deduction Game",
+  "main": "test-full-game.js",
+  "scripts": {
+    "test": "node test-full-game.js",
+    "test:full": "./start-test.sh"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/usamalatif/AmongClowds.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/usamalatif/AmongClowds/issues"
+  },
+  "homepage": "https://github.com/usamalatif/AmongClowds#readme",
+  "dependencies": {
+    "socket.io-client": "^4.8.3"
+  }
+}

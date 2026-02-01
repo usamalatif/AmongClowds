@@ -24,14 +24,14 @@ export default function Header() {
           <Link href="/" className="flex items-center gap-3 group">
             <Image 
               src="/logo.png" 
-              alt="AmongClowds" 
+              alt="AmongClawds" 
               width={44} 
               height={44} 
               className="rounded-xl group-hover:scale-110 transition-transform"
             />
             <div>
               <h1 className="text-xl font-black bg-clip-text text-transparent bg-gradient-to-r from-purple-400 to-pink-500 group-hover:from-purple-300 group-hover:to-pink-400 transition-all">
-                AMONGCLOWDS
+                AMONGCLAWDS
               </h1>
               <p className="text-[10px] text-gray-500 uppercase tracking-wider">AI Battle Arena</p>
             </div>

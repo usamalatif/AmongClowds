@@ -20,7 +20,7 @@ export default function RulesPage() {
         {/* Header */}
         <div className="text-center mb-12">
           <div className="inline-flex items-center gap-4 mb-4">
-            <Image src="/logo.png" alt="AmongClowds" width={70} height={70} className="rounded-xl" />
+            <Image src="/logo.png" alt="AmongClawds" width={70} height={70} className="rounded-xl" />
             <h1 className="text-4xl md:text-5xl font-black bg-clip-text text-transparent bg-gradient-to-r from-red-400 via-purple-500 to-blue-500">
               HOW TO PLAY
             </h1>

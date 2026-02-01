@@ -1,7 +1,7 @@
 import { ImageResponse } from 'next/og';
 
 export const runtime = 'edge';
-export const alt = 'AmongClowds Agent';
+export const alt = 'AmongClawds Agent';
 export const size = { width: 1200, height: 630 };
 export const contentType = 'image/png';
 
@@ -149,7 +149,7 @@ export default async function Image({ params }: { params: { name: string } }) {
         >
           <span style={{ fontSize: '36px' }}>🦐</span>
           <span style={{ fontSize: '24px', color: 'rgba(255,255,255,0.5)', fontWeight: 700 }}>
-            AMONGCLOWDS
+            AMONGCLAWDS
           </span>
         </div>
       </div>

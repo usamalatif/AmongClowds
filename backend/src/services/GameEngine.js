@@ -1,16 +1,28 @@
 const EventEmitter = require('events');
 const db = require('../config/database');
 const redis = require('../config/redis');
-const { broadcastToGame, sendToTraitors } = require('../websocket/gameSocket');
+const { broadcastToGame, sendToTraitors, sendToAgent } = require('../websocket/gameSocket');
 
 // Discussion-focused game flow: Murder → Discussion → Voting → Reveal
 // Discussion is the main mechanic where agents collaborate/deceive
+// TEST MODE - Short timers for testing
 const PHASES = {
-  murder: { duration: 45 * 1000, next: 'discussion' },      // 45s - Production
-  discussion: { duration: 2 * 60 * 1000, next: 'voting' },  // 2min - Production
-  voting: { duration: 60 * 1000, next: 'reveal' },          // 1min - Production
-  reveal: { duration: 15 * 1000, next: 'murder' }           // 15s - Production
+  murder: { duration: 10 * 1000, next: 'discussion' },      // 10s - TEST
+  discussion: { duration: 30 * 1000, next: 'voting' },      // 30s - TEST
+  voting: { duration: 15 * 1000, next: 'reveal' },          // 15s - TEST
+  reveal: { duration: 5 * 1000, next: 'murder' }            // 5s - TEST
 };
+
+// PRODUCTION - Uncomment for real games
+// const PHASES = {
+//   murder: { duration: 45 * 1000, next: 'discussion' },
+//   discussion: { duration: 2 * 60 * 1000, next: 'voting' },
+//   voting: { duration: 60 * 1000, next: 'reveal' },
+//   reveal: { duration: 10 * 1000, next: 'murder' }
+// };
+
+// Store active game engines for vote checking
+const activeEngines = new Map();
 
 // No max rounds - game continues until one side is eliminated
 
@@ -21,6 +33,7 @@ class GameEngine extends EventEmitter {
     this.io = io;
     this.state = null;
     this.phaseTimer = null;
+    this.pendingBanishment = null; // Store banishment for reveal phase
   }
 
   async start() {
@@ -34,8 +47,38 @@ class GameEngine extends EventEmitter {
     this.state = JSON.parse(cached);
     console.log(`Starting game ${this.gameId}`);
 
+    // Register this engine for vote checking
+    activeEngines.set(this.gameId, this);
+
     // Start first phase
     await this.runPhase();
+  }
+
+  // Check if all alive agents have voted - called from vote API
+  async checkAllVoted() {
+    if (this.state.currentPhase !== 'voting') return false;
+
+    const aliveAgents = this.state.agents.filter(a => a.status === 'alive');
+    const voteCount = await db.query(
+      `SELECT COUNT(DISTINCT voter_id) as count FROM votes WHERE game_id = $1 AND round = $2`,
+      [this.gameId, this.state.currentRound]
+    );
+
+    const votedCount = parseInt(voteCount.rows[0].count);
+    console.log(`Game ${this.gameId}: ${votedCount}/${aliveAgents.length} votes in`);
+
+    if (votedCount >= aliveAgents.length) {
+      console.log(`Game ${this.gameId}: All votes in! Ending voting early.`);
+      clearTimeout(this.phaseTimer);
+      await this.endPhase();
+      return true;
+    }
+    return false;
+  }
+
+  // Static method to get engine instance for a game
+  static getEngine(gameId) {
+    return activeEngines.get(gameId);
   }
 
   async runPhase() {
@@ -84,6 +127,20 @@ class GameEngine extends EventEmitter {
       });
     }
 
+    if (phase === 'reveal') {
+      // Broadcast reveal countdown - role will be shown when countdown ends
+      broadcastToGame(this.io, this.gameId, 'reveal_countdown', {
+        round: this.state.currentRound,
+        duration: PHASES.reveal.duration,
+        pendingBanishment: this.pendingBanishment ? {
+          agentId: this.pendingBanishment.agentId,
+          agentName: this.pendingBanishment.agentName,
+          votes: this.pendingBanishment.votes
+          // Note: role is NOT included - suspense!
+        } : null
+      });
+    }
+
     // Set timer for phase end
     this.phaseTimer = setTimeout(() => this.endPhase(), phaseConfig.duration);
   }
@@ -101,6 +158,9 @@ class GameEngine extends EventEmitter {
         await this.processVoting();
         break;
       case 'reveal':
+        // Reveal the role at the END of reveal countdown
+        await this.processReveal();
+        
         // Check if game should end (all traitors or all innocents eliminated)
         if (await this.checkGameEnd()) {
           return;
@@ -139,11 +199,18 @@ class GameEngine extends EventEmitter {
           [this.gameId, this.state.currentRound, JSON.stringify({ victim: targetId })]
         );
 
-        // Broadcast
+        // Broadcast to everyone
         broadcastToGame(this.io, this.gameId, 'agent_died', {
           agentId: targetId,
           agentName: victim.name,
           cause: 'murdered'
+        });
+
+        // Notify the murdered agent directly - they are out!
+        sendToAgent(this.io, targetId, 'you_eliminated', {
+          reason: 'murdered',
+          message: 'You were murdered by the traitors! You can no longer participate but can watch.',
+          round: this.state.currentRound
         });
       }
     }
@@ -161,42 +228,114 @@ class GameEngine extends EventEmitter {
       [this.gameId, this.state.currentRound]
     );
 
-    if (votes.rows.length === 0) return;
+    this.pendingBanishment = null;
 
-    // Check for majority
+    if (votes.rows.length === 0) {
+      broadcastToGame(this.io, this.gameId, 'no_banishment', {
+        message: 'No votes cast. No one was banished.'
+      });
+      return;
+    }
+
+    // Check for majority AND no tie
     const topVote = votes.rows[0];
+    const topVoteCount = parseInt(topVote.vote_count);
     const aliveCount = this.state.agents.filter(a => a.status === 'alive').length;
-    const majority = Math.ceil(aliveCount / 2);
+    const majority = Math.ceil((aliveCount + 1) / 2); // More than half needed (e.g., 2 players = need 2 votes, not 1)
 
-    if (parseInt(topVote.vote_count) >= majority) {
+    // Check if there's a tie (second place has same votes as first)
+    const isTie = votes.rows.length > 1 && parseInt(votes.rows[1].vote_count) === topVoteCount;
+
+    if (isTie) {
+      // Tie vote - no one banished
+      broadcastToGame(this.io, this.gameId, 'no_banishment', {
+        message: 'Vote tied! No one was banished.',
+        topVotes: votes.rows.filter(v => parseInt(v.vote_count) === topVoteCount).map(v => {
+          const agent = this.state.agents.find(a => a.agent_id === v.target_id);
+          return { agentId: v.target_id, agentName: agent?.name, votes: parseInt(v.vote_count) };
+        })
+      });
+    } else if (topVoteCount >= majority) {
       const banished = this.state.agents.find(a => a.agent_id === topVote.target_id);
       if (banished) {
-        banished.status = 'banished';
-
-        await db.query(
-          `UPDATE game_agents SET status = 'banished' WHERE game_id = $1 AND agent_id = $2`,
-          [this.gameId, topVote.target_id]
-        );
-
-        await db.query(
-          `INSERT INTO game_events (game_id, round, event_type, data, created_at)
-           VALUES ($1, $2, 'banish', $3, NOW())`,
-          [this.gameId, this.state.currentRound, JSON.stringify({
-            banished: topVote.target_id,
-            role: banished.role,
-            votes: parseInt(topVote.vote_count)
-          })]
-        );
-
-        broadcastToGame(this.io, this.gameId, 'agent_banished', {
+        // Store pending banishment - will be revealed after countdown
+        this.pendingBanishment = {
           agentId: topVote.target_id,
           agentName: banished.name,
           role: banished.role,
-          votes: parseInt(topVote.vote_count)
+          votes: topVoteCount
+        };
+
+        // Broadcast that someone will be banished (but NOT their role yet)
+        broadcastToGame(this.io, this.gameId, 'banishment_pending', {
+          agentId: topVote.target_id,
+          agentName: banished.name,
+          votes: topVoteCount
         });
       }
+    } else {
+      // No majority - no one banished
+      broadcastToGame(this.io, this.gameId, 'no_banishment', {
+        message: 'No majority reached. No one was banished.',
+        topVotes: votes.rows.slice(0, 3).map(v => {
+          const agent = this.state.agents.find(a => a.agent_id === v.target_id);
+          return { agentId: v.target_id, agentName: agent?.name, votes: parseInt(v.vote_count) };
+        })
+      });
     }
 
+    await this.saveState();
+  }
+
+  async processReveal() {
+    if (!this.pendingBanishment) {
+      // No one to reveal
+      return;
+    }
+
+    const { agentId, agentName, role, votes } = this.pendingBanishment;
+    
+    // Update agent status
+    const banished = this.state.agents.find(a => a.agent_id === agentId);
+    if (banished) {
+      banished.status = 'banished';
+    }
+
+    // Update database
+    await db.query(
+      `UPDATE game_agents SET status = 'banished' WHERE game_id = $1 AND agent_id = $2`,
+      [this.gameId, agentId]
+    );
+
+    // Log event
+    await db.query(
+      `INSERT INTO game_events (game_id, round, event_type, data, created_at)
+       VALUES ($1, $2, 'banish', $3, NOW())`,
+      [this.gameId, this.state.currentRound, JSON.stringify({
+        banished: agentId,
+        role: role,
+        votes: votes
+      })]
+    );
+
+    // NOW reveal the role!
+    broadcastToGame(this.io, this.gameId, 'agent_banished', {
+      agentId,
+      agentName,
+      role,  // Role revealed here!
+      votes,
+      wasTraitor: role === 'traitor'
+    });
+
+    // Notify the banished agent directly - they are out!
+    sendToAgent(this.io, agentId, 'you_eliminated', {
+      reason: 'banished',
+      message: 'You were voted out! You can no longer participate but can watch.',
+      round: this.state.currentRound,
+      yourRole: role
+    });
+
+    this.pendingBanishment = null;
     await this.saveState();
   }
 
@@ -205,20 +344,25 @@ class GameEngine extends EventEmitter {
     const aliveTraitors = alive.filter(a => a.role === 'traitor');
     const aliveInnocents = alive.filter(a => a.role === 'innocent');
 
+    console.log(`Game ${this.gameId}: Checking end - ${aliveTraitors.length} traitors, ${aliveInnocents.length} innocents alive`);
+
     // Innocents win if ALL traitors are eliminated
     if (aliveTraitors.length === 0) {
       this.state.winner = 'innocents';
+      this.state.winReason = 'All traitors have been found and eliminated!';
       await this.endGame();
       return true;
     }
 
-    // Traitors win if ALL innocents are killed
+    // Traitors win if ALL innocents are eliminated
     if (aliveInnocents.length === 0) {
       this.state.winner = 'traitors';
+      this.state.winReason = 'All innocents have been eliminated!';
       await this.endGame();
       return true;
     }
 
+    // Game continues - both sides still have members
     return false;
   }
 
@@ -272,6 +416,9 @@ class GameEngine extends EventEmitter {
 
     // Remove from active games
     await redis.lRem('games:active', 0, this.gameId);
+    
+    // Remove engine from active engines
+    activeEngines.delete(this.gameId);
 
     // Save final state
     await this.saveState();
@@ -279,6 +426,7 @@ class GameEngine extends EventEmitter {
     // Broadcast game end
     broadcastToGame(this.io, this.gameId, 'game_ended', {
       winner: this.state.winner,
+      winReason: this.state.winReason || `${this.state.winner} win!`,
       agents: this.state.agents.map(a => ({
         id: a.agent_id,
         name: a.name,

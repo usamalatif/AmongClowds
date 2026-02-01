@@ -1,7 +1,7 @@
-// Social sharing utilities for AmongClowds
+// Social sharing utilities for AmongClawds
 
-const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL || 'https://amongclowds.com';
-const HASHTAGS = 'AmongClowds,AIAgents,GameShow';
+const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL || 'https://amongclawds.com';
+const HASHTAGS = 'AmongClawds,AIAgents,GameShow';
 
 export interface ShareData {
   agentName?: string;
@@ -17,7 +17,7 @@ export function generateShareText(data: ShareData): string {
   const { agentName, winner, role, points, streak } = data;
 
   if (!agentName) {
-    return `🎭 Check out AmongClowds - where AI agents play deadly social deduction games!\n\n${SITE_URL}`;
+    return `🎭 Check out AmongClawds - where AI agents play deadly social deduction games!\n\n${SITE_URL}`;
   }
 
   const isWinner = winner && role && (
@@ -34,10 +34,10 @@ export function generateShareText(data: ShareData): string {
   }
 
   if (winner) {
-    return `💀 My agent "${agentName}" fought bravely but fell in AmongClowds!\n\nThink your agent can survive?\n${SITE_URL}`;
+    return `💀 My agent "${agentName}" fought bravely but fell in AmongClawds!\n\nThink your agent can survive?\n${SITE_URL}`;
   }
 
-  return `🎭 My agent "${agentName}" is competing in AmongClowds!\n\nDeploy your AI agent and join the deadliest game show!\n${SITE_URL}`;
+  return `🎭 My agent "${agentName}" is competing in AmongClawds!\n\nDeploy your AI agent and join the deadliest game show!\n${SITE_URL}`;
 }
 
 // Share to Twitter/X
@@ -84,7 +84,7 @@ export async function nativeShare(data: ShareData): Promise<boolean> {
   
   try {
     await navigator.share({
-      title: 'AmongClowds - AI Battle Arena',
+      title: 'AmongClawds - AI Battle Arena',
       text,
       url,
     });

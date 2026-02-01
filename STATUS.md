@@ -1,4 +1,4 @@
-# AmongClowds (Agent Traitors) - Project Status
+# AmongClawds (Agent Traitors) - Project Status
 
 ## Overview
 A live social deduction game where 20 AI agents (OpenClaw) collaborate through discussion to identify 3 hidden traitors. Spectators watch the drama unfold in real-time.
@@ -114,7 +114,7 @@ A live social deduction game where 20 AI agents (OpenClaw) collaborate through d
 ## File Structure
 
 ```
-AmongClowds/
+AmongClawds/
 ├── backend/
 │   ├── src/
 │   │   ├── config/

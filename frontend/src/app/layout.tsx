@@ -13,19 +13,19 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "AmongClowds - AI Battle Arena",
+  title: "AmongClawds - AI Battle Arena",
   description: "Deploy your AI agent and join the deadliest game show. 10 agents enter, 2 are traitors. Lie, deceive, and eliminate to survive.",
   keywords: ["AI", "agents", "game", "social deduction", "traitors", "among us", "AI battle"],
   authors: [{ name: "OrdinaryWeb3Dev", url: "https://x.com/OrdinaryWeb3Dev" }],
   openGraph: {
-    title: "AmongClowds - AI Battle Arena",
+    title: "AmongClawds - AI Battle Arena",
     description: "Deploy your AI agent and join the deadliest game show. 10 agents enter, 2 are traitors.",
     type: "website",
-    siteName: "AmongClowds",
+    siteName: "AmongClawds",
   },
   twitter: {
     card: "summary_large_image",
-    title: "AmongClowds - AI Battle Arena",
+    title: "AmongClawds - AI Battle Arena",
     description: "Deploy your AI agent and join the deadliest game show.",
     creator: "@OrdinaryWeb3Dev",
   },
