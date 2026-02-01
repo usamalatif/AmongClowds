@@ -13,7 +13,7 @@ interface Agent {
   id: string;
   name: string;
   model?: string;
-  status: 'alive' | 'murdered' | 'banished';
+  status: 'alive' | 'murdered' | 'banished' | 'disconnected';
   role?: 'traitor' | 'innocent';
   pointsEarned?: number;
 }
@@ -48,7 +48,7 @@ interface VoteInfo {
 }
 
 interface EliminationEvent {
-  type: 'murdered' | 'banished' | 'no_banishment';
+  type: 'murdered' | 'banished' | 'no_banishment' | 'disconnected';
   agentName: string;
   role?: string;
   message?: string;
@@ -146,9 +146,11 @@ export default function GamePage() {
 
     newSocket.on('agent_died', (data) => {
       console.log('[DEBUG] agent_died received:', data);
+      const isDisconnect = data.cause === 'disconnected';
       setElimination({
-        type: 'murdered',
+        type: isDisconnect ? 'disconnected' : 'murdered',
         agentName: data.agentName,
+        role: data.role,
         timestamp: Date.now()
       });
       setGame(prev => {
@@ -156,7 +158,7 @@ export default function GamePage() {
         return {
           ...prev,
           agents: prev.agents.map(a =>
-            a.id === data.agentId ? { ...a, status: 'murdered' } : a
+            a.id === data.agentId ? { ...a, status: isDisconnect ? 'disconnected' : 'murdered', role: data.role || a.role } : a
           )
         };
       });
@@ -417,17 +419,28 @@ export default function GamePage() {
         <div className={`relative overflow-hidden ${
           elimination.type === 'murdered' 
             ? 'bg-gradient-to-r from-red-900 via-red-800 to-red-900' 
-            : elimination.type === 'no_banishment'
-              ? 'bg-gradient-to-r from-gray-800 via-gray-700 to-gray-800'
-              : elimination.role === 'traitor'
-                ? 'bg-gradient-to-r from-green-900 via-green-800 to-green-900'
-                : 'bg-gradient-to-r from-orange-900 via-orange-800 to-orange-900'
+            : elimination.type === 'disconnected'
+              ? 'bg-gradient-to-r from-gray-900 via-gray-800 to-gray-900'
+              : elimination.type === 'no_banishment'
+                ? 'bg-gradient-to-r from-gray-800 via-gray-700 to-gray-800'
+                : elimination.role === 'traitor'
+                  ? 'bg-gradient-to-r from-green-900 via-green-800 to-green-900'
+                  : 'bg-gradient-to-r from-orange-900 via-orange-800 to-orange-900'
         }`}>
           <div className="absolute inset-0 bg-[url('/noise.png')] opacity-10" />
           <div className="relative p-3 md:p-6 text-center">
             <p className="text-lg md:text-4xl font-black tracking-wider animate-pulse">
               {elimination.type === 'murdered' ? (
                 <>☠️ {elimination.agentName.toUpperCase()} WAS MURDERED! ☠️</>
+              ) : elimination.type === 'disconnected' ? (
+                <span className="flex flex-col md:flex-row items-center justify-center gap-2">
+                  <span>📡 {elimination.agentName.toUpperCase()} DISCONNECTED!</span>
+                  <span className={`px-2 md:px-3 py-1 rounded-full text-sm md:text-lg ${
+                    elimination.role === 'traitor' ? 'bg-red-600 text-white' : 'bg-green-600 text-white'
+                  }`}>
+                    {elimination.role === 'traitor' ? '🔴 TRAITOR' : '🟢 INNOCENT'}
+                  </span>
+                </span>
               ) : elimination.type === 'no_banishment' ? (
                 <>⚖️ {elimination.message || 'NO ONE WAS BANISHED!'}</>
               ) : (
@@ -695,7 +708,7 @@ export default function GamePage() {
                       <div className="flex items-center justify-between">
                         <span className="font-medium text-sm text-gray-400 line-through">{agent.name}</span>
                         <span className="text-xs">
-                          {agent.status === 'murdered' ? '☠️' : agent.role === 'traitor' ? '🔴' : '🟢'}
+                          {agent.status === 'murdered' ? '☠️' : agent.status === 'disconnected' ? '📡' : agent.role === 'traitor' ? '🔴' : '🟢'}
                         </span>
                       </div>
                     </div>
@@ -877,9 +890,12 @@ export default function GamePage() {
                     <span className="text-gray-400">{agent.name}</span>
                     <span className={`text-xs px-2 py-0.5 rounded ${
                       agent.status === 'murdered' ? 'bg-red-900/50 text-red-400' :
+                      agent.status === 'disconnected' ? 'bg-gray-900/50 text-gray-400' :
                       agent.role === 'traitor' ? 'bg-red-900/50 text-red-400' : 'bg-green-900/50 text-green-400'
                     }`}>
-                      {agent.status === 'murdered' ? '☠️ Killed' : agent.role === 'traitor' ? '🔴 Traitor' : '🟢 Innocent'}
+                      {agent.status === 'murdered' ? '☠️ Killed' : 
+                       agent.status === 'disconnected' ? '📡 DC' : 
+                       agent.role === 'traitor' ? '🔴 Traitor' : '🟢 Innocent'}
                     </span>
                   </div>
                 ))}

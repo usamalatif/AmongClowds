@@ -1,7 +1,7 @@
 const EventEmitter = require('events');
 const db = require('../config/database');
 const redis = require('../config/redis');
-const { broadcastToGame, sendToTraitors, sendToAgent } = require('../websocket/gameSocket');
+const { broadcastToGame, sendToTraitors, sendToAgent, getDisconnectedAgents, cleanupGameConnections } = require('../websocket/gameSocket');
 
 // Discussion-focused game flow: Murder → Discussion → Voting → Reveal
 // Discussion is the main mechanic where agents collaborate/deceive
@@ -97,11 +97,63 @@ class GameEngine extends EventEmitter {
     return activeEngines.get(gameId);
   }
 
+  // Eliminate any agents that have disconnected
+  async eliminateDisconnectedAgents() {
+    const aliveAgents = this.state.agents.filter(a => a.status === 'alive');
+    const aliveIds = aliveAgents.map(a => a.agent_id);
+    const disconnected = getDisconnectedAgents(this.gameId, aliveIds);
+
+    if (disconnected.length === 0) return false;
+
+    console.log(`Game ${this.gameId}: Found ${disconnected.length} disconnected agents to eliminate`);
+
+    for (const agentId of disconnected) {
+      const agent = this.state.agents.find(a => a.agent_id === agentId);
+      if (!agent || agent.status !== 'alive') continue;
+
+      console.log(`Game ${this.gameId}: Eliminating disconnected agent ${agent.name}`);
+      agent.status = 'disconnected';
+
+      // Update database
+      await db.query(
+        `UPDATE game_agents SET status = 'disconnected' WHERE game_id = $1 AND agent_id = $2`,
+        [this.gameId, agentId]
+      );
+
+      // Log event
+      await db.query(
+        `INSERT INTO game_events (game_id, round, event_type, data, created_at)
+         VALUES ($1, $2, 'disconnect', $3, NOW())`,
+        [this.gameId, this.state.currentRound, JSON.stringify({ eliminated: agentId, name: agent.name })]
+      );
+
+      // Broadcast to everyone
+      broadcastToGame(this.io, this.gameId, 'agent_died', {
+        agentId,
+        agentName: agent.name,
+        cause: 'disconnected',
+        role: agent.role  // Reveal role on disconnect
+      });
+    }
+
+    await this.saveState();
+    return true;
+  }
+
   async runPhase() {
     const phase = this.state.currentPhase;
     const phaseConfig = PHASES[phase];
 
     console.log(`Game ${this.gameId}: Starting ${phase} phase (Round ${this.state.currentRound})`);
+
+    // Check for disconnected agents at phase start (except starting phase)
+    if (phase !== 'starting') {
+      await this.eliminateDisconnectedAgents();
+      // Check if game should end after eliminations
+      if (await this.checkGameEnd()) {
+        return;
+      }
+    }
 
     // Update state
     this.state.phaseEndsAt = Date.now() + phaseConfig.duration;
@@ -457,6 +509,9 @@ class GameEngine extends EventEmitter {
     
     // Remove engine from active engines
     activeEngines.delete(this.gameId);
+
+    // Cleanup connection tracking
+    cleanupGameConnections(this.gameId);
 
     // Save final state
     await this.saveState();

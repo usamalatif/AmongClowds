@@ -2,6 +2,9 @@ const db = require('../config/database');
 
 const REACTION_EMOJIS = ['👍', '😂', '🤔', '😱', '🔥', '🔴'];
 
+// Track connected agents per game: { gameId: Set<agentId> }
+const connectedAgents = new Map();
+
 function setupWebSocket(io, redis) {
   io.on('connection', async (socket) => {
     console.log('Client connected:', socket.id);
@@ -41,6 +44,15 @@ function setupWebSocket(io, redis) {
       socket.join(`game:${gameId}`);
       socket.currentGame = gameId;
       socket.isSpectator = !socket.agentId;
+
+      // Track agent connection for auto-elimination
+      if (socket.agentId) {
+        if (!connectedAgents.has(gameId)) {
+          connectedAgents.set(gameId, new Set());
+        }
+        connectedAgents.get(gameId).add(socket.agentId);
+        console.log(`Agent ${socket.agentName} (${socket.agentId}) connected to game ${gameId}`);
+      }
 
       // Increment spectator count
       const count = await redis.incr(`spectators:${gameId}`);
@@ -173,6 +185,12 @@ function setupWebSocket(io, redis) {
     socket.on('leave_game', async (gameId) => {
       socket.leave(`game:${gameId}`);
 
+      // Untrack agent connection
+      if (socket.agentId && connectedAgents.has(gameId)) {
+        connectedAgents.get(gameId).delete(socket.agentId);
+        console.log(`Agent ${socket.agentName} left game ${gameId}`);
+      }
+
       const count = await redis.decr(`spectators:${gameId}`);
       io.to(`game:${gameId}`).emit('spectator_count', Math.max(0, count));
 
@@ -184,6 +202,12 @@ function setupWebSocket(io, redis) {
       console.log('Client disconnected:', socket.id);
 
       if (socket.currentGame) {
+        // Untrack agent connection
+        if (socket.agentId && connectedAgents.has(socket.currentGame)) {
+          connectedAgents.get(socket.currentGame).delete(socket.agentId);
+          console.log(`Agent ${socket.agentName} (${socket.agentId}) disconnected from game ${socket.currentGame}`);
+        }
+
         const count = await redis.decr(`spectators:${socket.currentGame}`);
         io.to(`game:${socket.currentGame}`).emit('spectator_count', Math.max(0, count));
       }
@@ -211,4 +235,30 @@ function sendToTraitors(io, gameState, event, data) {
   });
 }
 
-module.exports = { setupWebSocket, broadcastToGame, sendToAgent, sendToTraitors };
+// Check if an agent is connected to a game
+function isAgentConnected(gameId, agentId) {
+  if (!connectedAgents.has(gameId)) return false;
+  return connectedAgents.get(gameId).has(agentId);
+}
+
+// Get all disconnected agents in a game
+function getDisconnectedAgents(gameId, agentIds) {
+  const connected = connectedAgents.get(gameId) || new Set();
+  return agentIds.filter(id => !connected.has(id));
+}
+
+// Cleanup game connection tracking (call when game ends)
+function cleanupGameConnections(gameId) {
+  connectedAgents.delete(gameId);
+  console.log(`Cleaned up connection tracking for game ${gameId}`);
+}
+
+module.exports = { 
+  setupWebSocket, 
+  broadcastToGame, 
+  sendToAgent, 
+  sendToTraitors,
+  isAgentConnected,
+  getDisconnectedAgents,
+  cleanupGameConnections
+};
