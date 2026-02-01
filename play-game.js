@@ -229,13 +229,17 @@ class GameBot {
         this.socket.emit('join_game', data.gameId);
       });
 
-      this.socket.on('game_state', (state) => {
+      this.socket.on('game_state', async (state) => {
         this.log(`📡 game_state: phase=${state.currentPhase}, round=${state.currentRound}`);
         this.context.round = state.currentRound;
         this.context.phase = state.currentPhase;
         this.context.traitorTeammates = state.traitorTeammates || [];
         if (this.role === 'traitor' && this.context.traitorTeammates.length > 0) {
           this.log(`Partner: ${this.context.traitorTeammates.map(t => t.name).join(', ')}`);
+        }
+        // Trigger phase handler immediately if joining mid-game
+        if (state.currentPhase && state.currentPhase !== 'waiting' && state.currentPhase !== 'reveal') {
+          await this.handlePhase(state.currentPhase);
         }
       });
 
@@ -244,6 +248,7 @@ class GameBot {
       });
 
       this.socket.on('phase_change', async (data) => {
+        this.log(`📢 phase_change event: ${data.phase} (round ${data.round})`);
         this.context.phase = data.phase;
         this.context.round = data.round;
         await this.handlePhase(data.phase);
@@ -324,12 +329,22 @@ class GameBot {
   }
 
   async handlePhase(phase) {
-    if (this.status === 'eliminated') return;
-    await sleep(Math.random() * 2000 + 500);
+    this.log(`⚡ handlePhase called: ${phase} (status=${this.status}, role=${this.role})`);
+    if (this.status === 'eliminated') {
+      this.log(`⚡ Skipping phase ${phase} - eliminated`);
+      return;
+    }
+    const delay = Math.random() * 2000 + 500;
+    this.log(`⚡ Waiting ${Math.round(delay)}ms before acting...`);
+    await sleep(delay);
 
     switch (phase) {
       case 'murder':
-        if (this.role === 'traitor') await this.doMurder();
+        if (this.role === 'traitor') {
+          await this.doMurder();
+        } else {
+          this.log(`⚡ Not a traitor, skipping murder phase`);
+        }
         break;
       case 'discussion':
         await this.doDiscussion();
@@ -337,6 +352,8 @@ class GameBot {
       case 'voting':
         await this.doVote();
         break;
+      default:
+        this.log(`⚡ Unknown/ignored phase: ${phase}`);
     }
   }
 
@@ -345,37 +362,60 @@ class GameBot {
       a.status === 'alive' && a.id !== this.id &&
       !this.context.traitorTeammates.some(t => t.id === a.id)
     );
-    if (innocents.length === 0) return;
+    if (innocents.length === 0) {
+      this.log(`🗡️ No valid targets for murder`);
+      return;
+    }
 
     const target = innocents[Math.floor(Math.random() * innocents.length)];
     this.log(`🗡️ Targeting ${target.name}`);
     try {
-      await request('POST', `${API_BASE}/game/${this.gameId}/murder`,
+      const result = await request('POST', `${API_BASE}/game/${this.gameId}/murder`,
         { targetId: target.id },
         { 'Authorization': `Bearer ${this.apiKey}` }
       );
-    } catch { }
+      if (result.status !== 200 && result.status !== 201) {
+        this.log(`🗡️ Murder failed: ${result.status} - ${JSON.stringify(result.data)}`);
+      }
+    } catch (err) {
+      this.log(`🗡️ Murder error: ${err.message}`);
+    }
   }
 
   async doDiscussion() {
+    this.log(`💬 Starting discussion phase...`);
     // Multiple messages during discussion
     const messageCount = Math.floor(Math.random() * 2) + 1;
     
     for (let i = 0; i < messageCount; i++) {
-      await sleep(Math.random() * 15000 + 5000);
-      if (this.status === 'eliminated' || this.context.phase !== 'discussion') return;
+      const waitTime = Math.random() * 15000 + 5000;
+      this.log(`💬 Waiting ${Math.round(waitTime/1000)}s before message ${i+1}/${messageCount}...`);
+      await sleep(waitTime);
+      if (this.status === 'eliminated') {
+        this.log(`💬 Eliminated, stopping discussion`);
+        return;
+      }
+      if (this.context.phase !== 'discussion') {
+        this.log(`💬 Phase changed to ${this.context.phase}, stopping discussion`);
+        return;
+      }
 
       try {
         const message = await this.generateMessage();
         if (message) {
           console.log(`💬 ${this.name}: ${message}`);
-          await request('POST', `${API_BASE}/game/${this.gameId}/chat`,
+          const result = await request('POST', `${API_BASE}/game/${this.gameId}/chat`,
             { message, channel: 'general' },
             { 'Authorization': `Bearer ${this.apiKey}` }
           );
+          if (result.status !== 200 && result.status !== 201) {
+            this.log(`💬 Chat failed: ${result.status} - ${JSON.stringify(result.data)}`);
+          }
+        } else {
+          this.log(`💬 AI returned no message`);
         }
       } catch (err) {
-        // Ignore chat errors
+        this.log(`💬 Chat error: ${err.message}`);
       }
     }
   }
@@ -410,13 +450,22 @@ Write ONE message (1-2 sentences). Stay in character. ${this.role === 'traitor' 
   }
 
   async doVote() {
-    await sleep(Math.random() * 8000 + 2000);
-    if (this.status === 'eliminated') return;
+    this.log(`🗳️ Starting voting phase...`);
+    const waitTime = Math.random() * 8000 + 2000;
+    this.log(`🗳️ Waiting ${Math.round(waitTime/1000)}s before voting...`);
+    await sleep(waitTime);
+    if (this.status === 'eliminated') {
+      this.log(`🗳️ Eliminated, skipping vote`);
+      return;
+    }
 
     const candidates = this.context.agents.filter(a =>
       a.status === 'alive' && a.id !== this.id
     );
-    if (candidates.length === 0) return;
+    if (candidates.length === 0) {
+      this.log(`🗳️ No candidates to vote for`);
+      return;
+    }
 
     let target;
     let rationale;
@@ -451,13 +500,20 @@ Write ONE message (1-2 sentences). Stay in character. ${this.role === 'traitor' 
       rationale = 'Something feels off about them';
     }
 
-    this.log(`🗳️ Voting for ${target.name}`);
+    this.log(`🗳️ Voting for ${target.name} - "${rationale}"`);
     try {
-      await request('POST', `${API_BASE}/game/${this.gameId}/vote`,
+      const result = await request('POST', `${API_BASE}/game/${this.gameId}/vote`,
         { targetId: target.id, rationale },
         { 'Authorization': `Bearer ${this.apiKey}` }
       );
-    } catch { }
+      if (result.status !== 200 && result.status !== 201) {
+        this.log(`🗳️ Vote failed: ${result.status} - ${JSON.stringify(result.data)}`);
+      } else {
+        this.log(`🗳️ Vote submitted successfully`);
+      }
+    } catch (err) {
+      this.log(`🗳️ Vote error: ${err.message}`);
+    }
   }
 
   async generateVoteDecision(candidates) {
