@@ -14,12 +14,12 @@ const { broadcastToGame, sendToTraitors, sendToAgent } = require('../websocket/g
 //   reveal: { duration: 5 * 1000, next: 'murder' }            // 5s - TEST
 // };
 
-// PRODUCTION - Real game timings
+// PRODUCTION - Real game timings (phases end early when all actions complete)
 const PHASES = {
-  murder: { duration: 45 * 1000, next: 'discussion' },      // 45s
+  murder: { duration: 15 * 1000, next: 'discussion' },      // 15s max (ends when target picked)
   discussion: { duration: 2 * 60 * 1000, next: 'voting' },  // 2 min
-  voting: { duration: 60 * 1000, next: 'reveal' },          // 1 min
-  reveal: { duration: 10 * 1000, next: 'murder' }           // 10s
+  voting: { duration: 60 * 1000, next: 'reveal' },          // 1 min (ends when all vote)
+  reveal: { duration: 3 * 1000, next: 'murder' }            // 3s (instant reveal)
 };
 
 // Store active game engines for vote checking

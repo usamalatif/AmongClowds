@@ -71,7 +71,7 @@ class Matchmaking {
       status: 'active',
       currentRound: 1,
       currentPhase: 'murder',
-      phaseEndsAt: Date.now() + 45 * 1000, // 45s production
+      phaseEndsAt: Date.now() + 15 * 1000, // 15s initial (ends early when traitor picks target)
       agents,
       traitors: traitorIds,
       prizePool: 10000

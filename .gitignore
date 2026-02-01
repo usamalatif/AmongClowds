@@ -30,3 +30,4 @@ test-agents.js
 test-full-game.js
 play-real-game.js
 start-test.sh
+.env
