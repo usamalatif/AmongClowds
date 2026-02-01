@@ -80,6 +80,7 @@ export default function GamePage() {
   const [elimination, setElimination] = useState<EliminationEvent | null>(null);
   const [susPoll, setSusPoll] = useState<Record<string, number>>({});
   const [showReactions, setShowReactions] = useState<string | null>(null);
+  const [mobileTab, setMobileTab] = useState<string>('chat');
 
   useEffect(() => {
     fetchGame();
@@ -336,54 +337,54 @@ export default function GamePage() {
 
       {/* Top Header Bar */}
       <header className="relative bg-black/80 backdrop-blur-sm border-b-2 border-purple-500/30">
-        <div className="max-w-7xl mx-auto px-4 py-3">
-          <div className="flex items-center justify-between">
+        <div className="max-w-7xl mx-auto px-2 md:px-4 py-2 md:py-3">
+          <div className="flex items-center justify-between gap-2">
             {/* Left - Game Info */}
-            <div className="flex items-center gap-4">
-              <Link href="/lobby" className="flex items-center gap-2 text-gray-400 hover:text-white transition-colors group">
-                <ArrowLeft size={18} className="group-hover:-translate-x-1 transition-transform" />
-                <span className="text-sm font-medium">EXIT</span>
+            <div className="flex items-center gap-2 md:gap-4">
+              <Link href="/lobby" className="flex items-center gap-1 md:gap-2 text-gray-400 hover:text-white transition-colors group">
+                <ArrowLeft size={16} className="group-hover:-translate-x-1 transition-transform" />
+                <span className="text-xs md:text-sm font-medium hidden sm:inline">EXIT</span>
               </Link>
-              <div className="h-8 w-px bg-gray-700" />
-              <div>
+              <div className="hidden sm:block h-8 w-px bg-gray-700" />
+              <div className="hidden sm:block">
                 <div className="flex items-center gap-2">
-                  <Swords className="w-5 h-5 text-purple-400" />
-                  <h1 className="text-lg font-black tracking-wide">GAME #{gameId.slice(0, 8).toUpperCase()}</h1>
+                  <Swords className="w-4 h-4 md:w-5 md:h-5 text-purple-400" />
+                  <h1 className="text-sm md:text-lg font-black tracking-wide">#{gameId.slice(0, 6).toUpperCase()}</h1>
                 </div>
-                <p className="text-xs text-gray-500">ROUND {game.currentRound}</p>
+                <p className="text-[10px] md:text-xs text-gray-500">ROUND {game.currentRound}</p>
               </div>
             </div>
 
             {/* Center - Phase Indicator */}
-            <div className={`flex items-center gap-4 px-6 py-2 rounded-2xl border-2 ${phase.border} ${phase.bg} shadow-lg ${phase.glow}`}>
-              <span className="text-4xl animate-pulse">{phaseConfig[game.currentPhase]?.icon || '🎮'}</span>
+            <div className={`flex items-center gap-2 md:gap-4 px-3 md:px-6 py-1.5 md:py-2 rounded-xl md:rounded-2xl border-2 ${phase.border} ${phase.bg} shadow-lg ${phase.glow}`}>
+              <span className="text-2xl md:text-4xl animate-pulse">{phaseConfig[game.currentPhase]?.icon || '🎮'}</span>
               <div>
-                <p className={`text-xl font-black uppercase tracking-wider ${phase.color}`}>
+                <p className={`text-sm md:text-xl font-black uppercase tracking-wider ${phase.color}`}>
                   {game.currentPhase}
                 </p>
-                <div className={`flex items-center gap-2 ${isLowTime ? 'text-red-400 animate-pulse' : 'text-gray-400'}`}>
-                  <Clock size={14} />
-                  <span className={`font-mono font-bold ${isLowTime ? 'text-lg' : ''}`}>{formatTime(timeLeft)}</span>
+                <div className={`flex items-center gap-1 md:gap-2 ${isLowTime ? 'text-red-400 animate-pulse' : 'text-gray-400'}`}>
+                  <Clock size={12} className="hidden md:block" />
+                  <span className={`font-mono font-bold text-sm md:text-base ${isLowTime ? 'md:text-lg' : ''}`}>{formatTime(timeLeft)}</span>
                 </div>
               </div>
             </div>
 
             {/* Right - Spectators & Sound */}
-            <div className="flex items-center gap-3">
+            <div className="flex items-center gap-2 md:gap-3">
               <SoundToggle />
-              <div className="flex items-center gap-2 bg-gray-800/60 px-4 py-2 rounded-xl">
-                <Eye size={16} className="text-pink-400" />
-                <span className="font-bold text-pink-400">{spectatorCount}</span>
-                <span className="text-xs text-gray-500">watching</span>
+              <div className="flex items-center gap-1 md:gap-2 bg-gray-800/60 px-2 md:px-4 py-1.5 md:py-2 rounded-lg md:rounded-xl">
+                <Eye size={14} className="text-pink-400" />
+                <span className="font-bold text-pink-400 text-sm">{spectatorCount}</span>
+                <span className="text-[10px] text-gray-500 hidden md:inline">watching</span>
               </div>
             </div>
           </div>
         </div>
         
-        {/* Phase Description Bar */}
+        {/* Phase Description Bar - Hidden on small mobile */}
         {game.status !== 'finished' && !elimination && (
-          <div className={`border-t ${phase.border} ${phase.bg} px-4 py-2`}>
-            <p className={`text-center text-sm font-medium ${phase.color}`}>
+          <div className={`hidden sm:block border-t ${phase.border} ${phase.bg} px-4 py-1.5 md:py-2`}>
+            <p className={`text-center text-xs md:text-sm font-medium ${phase.color}`}>
               {getPhaseDescription(game.currentPhase)}
             </p>
           </div>
@@ -514,11 +515,33 @@ export default function GamePage() {
         </div>
       )}
 
+      {/* Mobile Tab Navigation */}
+      <div className="lg:hidden flex border-b border-gray-800 bg-black/60 sticky top-[52px] z-40">
+        {[
+          { id: 'chat', label: 'Chat', icon: MessageCircle },
+          { id: 'players', label: 'Players', icon: Users },
+          { id: 'votes', label: 'Votes', icon: Vote },
+        ].map(tab => (
+          <button
+            key={tab.id}
+            onClick={() => setMobileTab(tab.id)}
+            className={`flex-1 flex items-center justify-center gap-2 py-3 text-sm font-medium transition-all ${
+              mobileTab === tab.id
+                ? 'text-purple-400 border-b-2 border-purple-500 bg-purple-900/20'
+                : 'text-gray-500'
+            }`}
+          >
+            <tab.icon size={16} />
+            {tab.label}
+          </button>
+        ))}
+      </div>
+
       {/* Main Content */}
-      <div className="relative max-w-7xl mx-auto p-4 grid grid-cols-1 lg:grid-cols-12 gap-4" style={{ height: 'calc(100vh - 140px)' }}>
+      <div className="relative max-w-7xl mx-auto p-2 md:p-4 grid grid-cols-1 lg:grid-cols-12 gap-2 md:gap-4" style={{ height: 'calc(100vh - 140px)' }}>
         
-        {/* Left Sidebar */}
-        <div className="lg:col-span-3 space-y-4 overflow-y-auto">
+        {/* Left Sidebar - Hidden on mobile unless tab selected */}
+        <div className={`lg:col-span-3 space-y-3 md:space-y-4 overflow-y-auto ${mobileTab !== 'players' ? 'hidden lg:block' : ''}`}>
           {/* Battle Stats */}
           <div className="bg-black/60 backdrop-blur-sm border-2 border-purple-500/30 rounded-2xl p-4">
             <h3 className="text-xs text-gray-500 font-bold uppercase tracking-wider mb-3 text-center">⚔️ BATTLE STATUS</h3>
@@ -649,39 +672,40 @@ export default function GamePage() {
         </div>
 
         {/* Main Chat Area */}
-        <div className="lg:col-span-6 bg-black/60 backdrop-blur-sm border-2 border-purple-500/30 rounded-2xl flex flex-col overflow-hidden">
-          <div className="bg-gradient-to-r from-purple-900/50 to-transparent px-5 py-4 border-b border-purple-500/30">
+        <div className={`lg:col-span-6 bg-black/60 backdrop-blur-sm border-2 border-purple-500/30 rounded-xl md:rounded-2xl flex flex-col overflow-hidden ${mobileTab !== 'chat' ? 'hidden lg:flex' : ''}`}>
+          <div className="bg-gradient-to-r from-purple-900/50 to-transparent px-3 md:px-5 py-2 md:py-4 border-b border-purple-500/30">
             <div className="flex items-center justify-between">
-              <h2 className="font-bold flex items-center gap-2 text-lg">
-                <MessageCircle className="w-5 h-5 text-purple-400" />
-                LIVE TRANSMISSION
+              <h2 className="font-bold flex items-center gap-2 text-sm md:text-lg">
+                <MessageCircle className="w-4 h-4 md:w-5 md:h-5 text-purple-400" />
+                <span className="hidden sm:inline">LIVE TRANSMISSION</span>
+                <span className="sm:hidden">CHAT</span>
               </h2>
-              <span className="text-xs text-gray-500 bg-gray-800/60 px-3 py-1 rounded-full">
-                {chat.length} messages • Click to react!
+              <span className="text-[10px] md:text-xs text-gray-500 bg-gray-800/60 px-2 md:px-3 py-1 rounded-full">
+                {chat.length} msgs
               </span>
             </div>
           </div>
-          <div className="flex-1 overflow-y-auto p-4 space-y-3">
+          <div className="flex-1 overflow-y-auto p-2 md:p-4 space-y-2 md:space-y-3">
             {chat.length > 0 ? chat.map((msg, i) => (
               <div 
                 key={msg.messageId || i} 
-                className="bg-gradient-to-r from-gray-900/80 to-gray-900/40 rounded-xl p-4 hover:from-purple-900/30 hover:to-gray-900/40 transition-all relative group border border-transparent hover:border-purple-500/20"
+                className="bg-gradient-to-r from-gray-900/80 to-gray-900/40 rounded-lg md:rounded-xl p-2.5 md:p-4 hover:from-purple-900/30 hover:to-gray-900/40 transition-all relative group border border-transparent hover:border-purple-500/20"
               >
-                <div className="flex items-center justify-between mb-2">
-                  <span className="font-bold text-purple-400 flex items-center gap-2">
-                    <span className="w-2 h-2 bg-purple-500 rounded-full" />
+                <div className="flex items-center justify-between mb-1 md:mb-2">
+                  <span className="font-bold text-purple-400 flex items-center gap-1.5 md:gap-2 text-sm">
+                    <span className="w-1.5 h-1.5 md:w-2 md:h-2 bg-purple-500 rounded-full" />
                     {msg.agentName}
                   </span>
-                  <span className="text-xs text-gray-600">{formatTimestamp(msg.timestamp)}</span>
+                  <span className="text-[10px] md:text-xs text-gray-600">{formatTimestamp(msg.timestamp)}</span>
                 </div>
-                <p className="text-gray-200 text-sm leading-relaxed pl-4">{msg.message}</p>
+                <p className="text-gray-200 text-xs md:text-sm leading-relaxed pl-3 md:pl-4">{msg.message}</p>
                 
                 {/* Reactions */}
                 {msg.reactions && totalReactions(msg.reactions) > 0 && (
-                  <div className="flex flex-wrap gap-1.5 mt-3 pl-4">
+                  <div className="flex flex-wrap gap-1 md:gap-1.5 mt-2 md:mt-3 pl-3 md:pl-4">
                     {Object.entries(msg.reactions).map(([emoji, count]) => (
                       Number(count) > 0 && (
-                        <span key={emoji} className="bg-gray-800/80 px-2.5 py-1 rounded-full text-xs border border-gray-700">
+                        <span key={emoji} className="bg-gray-800/80 px-1.5 md:px-2.5 py-0.5 md:py-1 rounded-full text-[10px] md:text-xs border border-gray-700">
                           {emoji} {count}
                         </span>
                       )
@@ -692,19 +716,19 @@ export default function GamePage() {
                 {/* Reaction Button */}
                 <button
                   onClick={() => setShowReactions(showReactions === msg.messageId ? null : msg.messageId)}
-                  className="absolute right-3 top-3 opacity-0 group-hover:opacity-100 transition-opacity bg-gray-800 p-2 rounded-lg hover:bg-purple-900"
+                  className="absolute right-2 md:right-3 top-2 md:top-3 opacity-0 group-hover:opacity-100 md:transition-opacity bg-gray-800 p-1.5 md:p-2 rounded-lg hover:bg-purple-900"
                 >
-                  <ThumbsUp size={14} />
+                  <ThumbsUp size={12} className="md:w-[14px] md:h-[14px]" />
                 </button>
 
                 {/* Reaction Picker */}
                 {showReactions === msg.messageId && (
-                  <div className="absolute right-0 top-10 bg-gray-900 border-2 border-purple-500/30 rounded-xl p-2 flex gap-1 z-10 shadow-2xl">
+                  <div className="absolute right-0 top-8 md:top-10 bg-gray-900 border-2 border-purple-500/30 rounded-xl p-1.5 md:p-2 flex gap-0.5 md:gap-1 z-10 shadow-2xl">
                     {REACTION_EMOJIS.map(emoji => (
                       <button
                         key={emoji}
                         onClick={() => handleReaction(msg.messageId, emoji)}
-                        className="hover:scale-125 transition-transform text-xl p-1.5 hover:bg-purple-900/50 rounded-lg"
+                        className="hover:scale-125 transition-transform text-lg md:text-xl p-1 md:p-1.5 hover:bg-purple-900/50 rounded-lg"
                       >
                         {emoji}
                       </button>
@@ -725,8 +749,8 @@ export default function GamePage() {
           </div>
         </div>
 
-        {/* Right Sidebar */}
-        <div className="lg:col-span-3 space-y-4 overflow-y-auto">
+        {/* Right Sidebar - Hidden on mobile unless votes tab selected */}
+        <div className={`lg:col-span-3 space-y-3 md:space-y-4 overflow-y-auto ${mobileTab !== 'votes' ? 'hidden lg:block' : ''}`}
           {/* Vote Tally */}
           {game.currentPhase === 'voting' && sortedVoteTally.length > 0 && (
             <div className="bg-black/60 backdrop-blur-sm border-2 border-yellow-500/40 rounded-2xl p-4 shadow-lg shadow-yellow-500/10">

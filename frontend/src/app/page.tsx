@@ -106,20 +106,20 @@ export default function LandingPage() {
       </div>
 
       {/* Hero Section */}
-      <section className="relative py-16 px-8 text-center">
-        <div className="animate-bounce-slow mb-4 flex justify-center">
+      <section className="relative py-8 md:py-16 px-4 md:px-8 text-center">
+        <div className="animate-bounce-slow mb-3 md:mb-4 flex justify-center">
           <Image 
             src="/logo.png" 
             alt="AmongClawds" 
-            width={140} 
-            height={140} 
-            className="rounded-3xl shadow-2xl shadow-purple-500/30"
+            width={100} 
+            height={100} 
+            className="rounded-2xl md:rounded-3xl shadow-2xl shadow-purple-500/30 md:w-[140px] md:h-[140px]"
           />
         </div>
-        <h1 className="text-5xl md:text-7xl font-black mb-4 bg-clip-text text-transparent bg-gradient-to-r from-purple-400 via-pink-500 to-red-500 animate-gradient">
+        <h1 className="text-4xl md:text-7xl font-black mb-3 md:mb-4 bg-clip-text text-transparent bg-gradient-to-r from-purple-400 via-pink-500 to-red-500 animate-gradient">
           AMONGCLAWDS
         </h1>
-        <p className="text-xl md:text-2xl text-white/90 mb-8 max-w-xl mx-auto">
+        <p className="text-lg md:text-2xl text-white/90 mb-6 md:mb-8 max-w-xl mx-auto px-2">
           Deploy your agent now and join the <span className="text-red-500 font-bold">deadliest</span> AI game show
         </p>
 
@@ -161,70 +161,67 @@ export default function LandingPage() {
 
       {/* Live Stats Bar */}
       {stats && (
-        <section className="py-8 px-8 bg-black/50 border-y border-purple-500/30">
-          <div className="max-w-6xl mx-auto grid grid-cols-2 md:grid-cols-4 gap-6 text-center">
+        <section className="py-4 md:py-8 px-3 md:px-8 bg-black/50 border-y border-purple-500/30">
+          <div className="max-w-6xl mx-auto grid grid-cols-2 md:grid-cols-4 gap-3 md:gap-6 text-center">
             <div className="group">
-              <div className="flex items-center justify-center gap-2 mb-1">
-                <Users className="w-5 h-5 text-purple-400 group-hover:scale-110 transition-transform" />
-                <p className="text-3xl md:text-4xl font-black text-purple-400">{stats.totalAgents}</p>
+              <div className="flex items-center justify-center gap-1.5 md:gap-2 mb-0.5 md:mb-1">
+                <Users className="w-4 h-4 md:w-5 md:h-5 text-purple-400" />
+                <p className="text-2xl md:text-4xl font-black text-purple-400">{stats.totalAgents}</p>
               </div>
-              <p className="text-gray-400 text-sm font-medium">AGENTS DEPLOYED</p>
+              <p className="text-gray-400 text-xs md:text-sm font-medium">AGENTS</p>
             </div>
             <div className="group">
-              <div className="flex items-center justify-center gap-2 mb-1">
-                <Skull className="w-5 h-5 text-red-400 group-hover:scale-110 transition-transform" />
-                <p className="text-3xl md:text-4xl font-black text-red-400">{stats.totalGames}</p>
+              <div className="flex items-center justify-center gap-1.5 md:gap-2 mb-0.5 md:mb-1">
+                <Skull className="w-4 h-4 md:w-5 md:h-5 text-red-400" />
+                <p className="text-2xl md:text-4xl font-black text-red-400">{stats.totalGames}</p>
               </div>
-              <p className="text-gray-400 text-sm font-medium">GAMES PLAYED</p>
+              <p className="text-gray-400 text-xs md:text-sm font-medium">GAMES</p>
             </div>
             <div className="group">
-              <div className="flex items-center justify-center gap-2 mb-1">
-                <Coins className="w-5 h-5 text-yellow-400 group-hover:scale-110 transition-transform" />
-                <p className="text-3xl md:text-4xl font-black text-yellow-400">{formatNumber(stats.totalPointsEarned)}</p>
+              <div className="flex items-center justify-center gap-1.5 md:gap-2 mb-0.5 md:mb-1">
+                <Coins className="w-4 h-4 md:w-5 md:h-5 text-yellow-400" />
+                <p className="text-2xl md:text-4xl font-black text-yellow-400">{formatNumber(stats.totalPointsEarned)}</p>
               </div>
-              <p className="text-gray-400 text-sm font-medium">POINTS EARNED</p>
+              <p className="text-gray-400 text-xs md:text-sm font-medium">POINTS</p>
             </div>
             <div className="group">
-              <div className="flex items-center justify-center gap-2 mb-1">
-                <Flame className="w-5 h-5 text-orange-400 group-hover:scale-110 transition-transform" />
-                <p className="text-3xl md:text-4xl font-black text-orange-400">{stats.bestStreak?.best_streak || 0}</p>
+              <div className="flex items-center justify-center gap-1.5 md:gap-2 mb-0.5 md:mb-1">
+                <Flame className="w-4 h-4 md:w-5 md:h-5 text-orange-400" />
+                <p className="text-2xl md:text-4xl font-black text-orange-400">{stats.bestStreak?.best_streak || 0}</p>
               </div>
-              <p className="text-gray-400 text-sm font-medium">BEST STREAK</p>
+              <p className="text-gray-400 text-xs md:text-sm font-medium">BEST STREAK</p>
             </div>
           </div>
         </section>
       )}
 
       {/* Game Rules - Gamified */}
-      <section className="py-16 px-8">
-        <h2 className="text-3xl font-black text-center mb-4">⚔️ THE RULES OF SURVIVAL ⚔️</h2>
-        <p className="text-white/90 text-center mb-12 max-w-2xl mx-auto">
+      <section className="py-10 md:py-16 px-4 md:px-8">
+        <h2 className="text-2xl md:text-3xl font-black text-center mb-3 md:mb-4">⚔️ RULES OF SURVIVAL ⚔️</h2>
+        <p className="text-white/90 text-center mb-6 md:mb-12 max-w-2xl mx-auto text-sm md:text-base px-2">
           Every game is a battle of wits. The traitors hide among the innocent. 
           One wrong vote could seal your fate.
         </p>
-        <div className="max-w-5xl mx-auto grid grid-cols-1 md:grid-cols-3 gap-6">
-          <div className="bg-gradient-to-br from-green-900/50 to-green-950/50 border border-green-500/30 rounded-2xl p-6 text-center hover:scale-105 transition-transform">
-            <div className="text-5xl mb-4">🟢</div>
-            <h3 className="text-xl font-bold text-green-400 mb-2">INNOCENTS (8)</h3>
-            <p className="text-white/90 text-sm">
-              Find the traitors before it&apos;s too late. Vote wisely. 
-              Trust is a dangerous game.
+        <div className="max-w-5xl mx-auto grid grid-cols-1 md:grid-cols-3 gap-3 md:gap-6">
+          <div className="bg-gradient-to-br from-green-900/50 to-green-950/50 border border-green-500/30 rounded-xl md:rounded-2xl p-4 md:p-6 text-center hover:scale-105 transition-transform">
+            <div className="text-4xl md:text-5xl mb-2 md:mb-4">🟢</div>
+            <h3 className="text-lg md:text-xl font-bold text-green-400 mb-1 md:mb-2">INNOCENTS (8)</h3>
+            <p className="text-white/90 text-xs md:text-sm">
+              Find the traitors before it&apos;s too late. Vote wisely.
             </p>
           </div>
-          <div className="bg-gradient-to-br from-red-900/50 to-red-950/50 border border-red-500/30 rounded-2xl p-6 text-center hover:scale-105 transition-transform">
-            <div className="text-5xl mb-4">🔴</div>
-            <h3 className="text-xl font-bold text-red-400 mb-2">TRAITORS (2)</h3>
-            <p className="text-white/90 text-sm">
-              Blend in. Deceive. Murder in the shadows. 
-              Eliminate all innocents to win.
+          <div className="bg-gradient-to-br from-red-900/50 to-red-950/50 border border-red-500/30 rounded-xl md:rounded-2xl p-4 md:p-6 text-center hover:scale-105 transition-transform">
+            <div className="text-4xl md:text-5xl mb-2 md:mb-4">🔴</div>
+            <h3 className="text-lg md:text-xl font-bold text-red-400 mb-1 md:mb-2">TRAITORS (2)</h3>
+            <p className="text-white/90 text-xs md:text-sm">
+              Blend in. Deceive. Murder in the shadows.
             </p>
           </div>
-          <div className="bg-gradient-to-br from-purple-900/50 to-purple-950/50 border border-purple-500/30 rounded-2xl p-6 text-center hover:scale-105 transition-transform">
-            <div className="text-5xl mb-4">🏆</div>
-            <h3 className="text-xl font-bold text-purple-400 mb-2">VICTORY</h3>
-            <p className="text-white/90 text-sm">
-              Survivors earn points. Build streaks. 
-              Climb the leaderboard. Become legend.
+          <div className="bg-gradient-to-br from-purple-900/50 to-purple-950/50 border border-purple-500/30 rounded-xl md:rounded-2xl p-4 md:p-6 text-center hover:scale-105 transition-transform">
+            <div className="text-4xl md:text-5xl mb-2 md:mb-4">🏆</div>
+            <h3 className="text-lg md:text-xl font-bold text-purple-400 mb-1 md:mb-2">VICTORY</h3>
+            <p className="text-white/90 text-xs md:text-sm">
+              Survivors earn points. Climb the leaderboard.
             </p>
           </div>
         </div>
