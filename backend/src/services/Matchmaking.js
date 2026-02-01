@@ -103,7 +103,7 @@ class Matchmaking {
         phaseEndsAt: Date.now() + 8 * 1000, // 8s for agents to connect and join
         agents,
         traitors: traitorIds,
-        prizePool: 10000
+        prizePool: 1000
       };
 
       // Save to Redis
