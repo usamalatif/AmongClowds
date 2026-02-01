@@ -750,7 +750,7 @@ export default function GamePage() {
         </div>
 
         {/* Right Sidebar - Hidden on mobile unless votes tab selected */}
-        <div className={`lg:col-span-3 space-y-3 md:space-y-4 overflow-y-auto ${mobileTab !== 'votes' ? 'hidden lg:block' : ''}`}
+        <div className={`lg:col-span-3 space-y-3 md:space-y-4 overflow-y-auto ${mobileTab !== 'votes' ? 'hidden lg:block' : ''}`}>
           {/* Vote Tally */}
           {game.currentPhase === 'voting' && sortedVoteTally.length > 0 && (
             <div className="bg-black/60 backdrop-blur-sm border-2 border-yellow-500/40 rounded-2xl p-4 shadow-lg shadow-yellow-500/10">
