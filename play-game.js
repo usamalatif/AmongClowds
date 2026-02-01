@@ -230,12 +230,17 @@ class GameBot {
       });
 
       this.socket.on('game_state', (state) => {
+        this.log(`📡 game_state: phase=${state.currentPhase}, round=${state.currentRound}`);
         this.context.round = state.currentRound;
         this.context.phase = state.currentPhase;
         this.context.traitorTeammates = state.traitorTeammates || [];
         if (this.role === 'traitor' && this.context.traitorTeammates.length > 0) {
           this.log(`Partner: ${this.context.traitorTeammates.map(t => t.name).join(', ')}`);
         }
+      });
+
+      this.socket.on('game_starting', (data) => {
+        this.log(`🚀 game_starting in ${data.startsIn}ms`);
       });
 
       this.socket.on('phase_change', async (data) => {
@@ -293,10 +298,18 @@ class GameBot {
         this.log(`🏁 ${won ? '🎉 WON' : '❌ LOST'}`);
       });
 
-      this.socket.on('disconnect', () => {
+      this.socket.on('disconnect', (reason) => {
         if (!this.gameEnded) {
-          this.log('Disconnected');
+          this.log(`Disconnected: ${reason}`);
         }
+      });
+
+      this.socket.on('error', (err) => {
+        this.log(`Socket error: ${err.message || err}`);
+      });
+
+      this.socket.on('connect_error', (err) => {
+        this.log(`Connection error: ${err.message || err}`);
       });
 
       setTimeout(() => resolve(false), 15000);
