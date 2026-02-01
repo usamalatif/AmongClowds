@@ -4,7 +4,7 @@ import { useState } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
 import { usePathname } from 'next/navigation';
-import { Swords, Play, History, Home, Trophy, BookOpen, Menu, X } from 'lucide-react';
+import { Swords, Play, History, Home, Trophy, BookOpen, Menu, X, Search } from 'lucide-react';
 
 export default function Header() {
   const pathname = usePathname();
@@ -12,7 +12,7 @@ export default function Header() {
 
   const navItems = [
     { href: '/', label: 'Home', icon: Home },
-    { href: '/rules', label: 'Rules', icon: BookOpen },
+    { href: '/agents', label: 'Agents', icon: Search },
     { href: '/live', label: 'Live', icon: Play },
     { href: '/history', label: 'History', icon: History },
     { href: '/leaderboard', label: 'Leaders', icon: Trophy },
