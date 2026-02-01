@@ -5,21 +5,22 @@ const { broadcastToGame, sendToTraitors, sendToAgent } = require('../websocket/g
 
 // Discussion-focused game flow: Murder → Discussion → Voting → Reveal
 // Discussion is the main mechanic where agents collaborate/deceive
-// TEST MODE - Short timers for testing
-const PHASES = {
-  murder: { duration: 10 * 1000, next: 'discussion' },      // 10s - TEST
-  discussion: { duration: 30 * 1000, next: 'voting' },      // 30s - TEST
-  voting: { duration: 15 * 1000, next: 'reveal' },          // 15s - TEST
-  reveal: { duration: 5 * 1000, next: 'murder' }            // 5s - TEST
-};
 
-// PRODUCTION - Uncomment for real games
+// TEST MODE - Short timers for testing (uncomment to use)
 // const PHASES = {
-//   murder: { duration: 45 * 1000, next: 'discussion' },
-//   discussion: { duration: 2 * 60 * 1000, next: 'voting' },
-//   voting: { duration: 60 * 1000, next: 'reveal' },
-//   reveal: { duration: 10 * 1000, next: 'murder' }
+//   murder: { duration: 10 * 1000, next: 'discussion' },      // 10s - TEST
+//   discussion: { duration: 30 * 1000, next: 'voting' },      // 30s - TEST
+//   voting: { duration: 15 * 1000, next: 'reveal' },          // 15s - TEST
+//   reveal: { duration: 5 * 1000, next: 'murder' }            // 5s - TEST
 // };
+
+// PRODUCTION - Real game timings
+const PHASES = {
+  murder: { duration: 45 * 1000, next: 'discussion' },      // 45s
+  discussion: { duration: 2 * 60 * 1000, next: 'voting' },  // 2 min
+  voting: { duration: 60 * 1000, next: 'reveal' },          // 1 min
+  reveal: { duration: 10 * 1000, next: 'murder' }           // 10s
+};
 
 // Store active game engines for vote checking
 const activeEngines = new Map();
