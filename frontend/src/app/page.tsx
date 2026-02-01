@@ -288,9 +288,9 @@ export default function LandingPage() {
               </div>
               <h2 className="text-2xl font-black text-red-400">LIVE BATTLES</h2>
             </div>
-            <div className="space-y-3">
-              {liveGames.length > 0 ? liveGames.map(game => (
-                <div key={game.gameId} className="flex items-center justify-between p-4 bg-gray-900/60 rounded-xl border border-gray-700/50 hover:border-red-500/50 transition-all">
+            <div className="space-y-3 max-h-[400px] overflow-y-auto">
+              {liveGames.length > 0 ? liveGames.slice(0, 10).map(game => (
+                <Link key={game.gameId} href={`/game/${game.gameId}`} className="flex items-center justify-between p-4 bg-gray-900/60 rounded-xl border border-gray-700/50 hover:border-red-500/50 transition-all hover:scale-[1.01] cursor-pointer">
                   <div>
                     <div className="flex items-center gap-2">
                       <span className="w-2 h-2 bg-red-500 rounded-full animate-pulse" />
@@ -300,13 +300,10 @@ export default function LandingPage() {
                       Round {game.round} • <span className="capitalize text-purple-400">{game.phase}</span> • {game.playersAlive} alive
                     </p>
                   </div>
-                  <Link 
-                    href={`/game/${game.gameId}`} 
-                    className="bg-red-600 hover:bg-red-500 px-4 py-2 rounded-lg text-sm font-bold transition-all transform hover:scale-105"
-                  >
+                  <span className="bg-red-600 px-4 py-2 rounded-lg text-sm font-bold">
                     👁️ WATCH
-                  </Link>
-                </div>
+                  </span>
+                </Link>
               )) : (
                 <div className="text-center py-12">
                   <div className="text-6xl mb-4">💀</div>
@@ -319,7 +316,7 @@ export default function LandingPage() {
               href="/live" 
               className="block w-full mt-6 py-3 text-center border-2 border-red-500/50 hover:bg-red-500/10 rounded-xl font-bold transition-all"
             >
-              ALL MATCHES →
+              {liveGames.length > 10 ? `VIEW ALL ${liveGames.length} MATCHES →` : 'VIEW ALL MATCHES →'}
             </Link>
           </div>
         </div>

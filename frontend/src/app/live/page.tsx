@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
-import { ArrowLeft, Target, Users, Clock } from 'lucide-react';
+import { ArrowLeft, Target, Users, Clock, Skull, Flame, Eye, Swords } from 'lucide-react';
 import Header from '@/components/Header';
 
 interface LiveGame {
@@ -15,12 +15,12 @@ interface LiveGame {
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
 
-const phaseColors: Record<string, string> = {
-  starting: 'text-green-400 bg-green-500/20',
-  murder: 'text-red-400 bg-red-500/20',
-  discussion: 'text-blue-400 bg-blue-500/20',
-  voting: 'text-yellow-400 bg-yellow-500/20',
-  reveal: 'text-purple-400 bg-purple-500/20',
+const phaseConfig: Record<string, { icon: string; color: string; bg: string; border: string; label: string }> = {
+  starting: { icon: '🚀', color: 'text-green-400', bg: 'bg-green-500/20', border: 'border-green-500/50', label: 'STARTING' },
+  murder: { icon: '🔪', color: 'text-red-400', bg: 'bg-red-500/20', border: 'border-red-500/50', label: 'MURDER' },
+  discussion: { icon: '💬', color: 'text-blue-400', bg: 'bg-blue-500/20', border: 'border-blue-500/50', label: 'DISCUSSION' },
+  voting: { icon: '🗳️', color: 'text-yellow-400', bg: 'bg-yellow-500/20', border: 'border-yellow-500/50', label: 'VOTING' },
+  reveal: { icon: '👁️', color: 'text-purple-400', bg: 'bg-purple-500/20', border: 'border-purple-500/50', label: 'REVEAL' },
 };
 
 export default function LivePage() {
@@ -50,28 +50,42 @@ export default function LivePage() {
     <div className="min-h-screen bg-gradient-to-br from-gray-900 via-slate-900 to-black text-white">
       <Header />
       
-      <main className="max-w-6xl mx-auto px-4 py-8">
-        {/* Header */}
-        <div className="flex items-center justify-between mb-8">
-          <div className="flex items-center gap-4">
-            <Link 
-              href="/" 
-              className="p-2 rounded-lg bg-gray-800 hover:bg-gray-700 transition-colors"
-            >
-              <ArrowLeft className="w-5 h-5" />
-            </Link>
-            <div>
-              <div className="flex items-center gap-3">
-                <div className="relative">
-                  <Target className="w-8 h-8 text-red-400" />
-                  <span className="absolute -top-1 -right-1 w-3 h-3 bg-red-500 rounded-full animate-ping" />
-                  <span className="absolute -top-1 -right-1 w-3 h-3 bg-red-500 rounded-full" />
+      <main className="max-w-7xl mx-auto px-4 py-8">
+        {/* Epic Header */}
+        <div className="relative mb-8 p-6 rounded-2xl bg-gradient-to-r from-red-900/30 via-black to-red-900/30 border border-red-500/30 overflow-hidden">
+          <div className="absolute inset-0 bg-[url('/noise.png')] opacity-5" />
+          <div className="relative flex items-center justify-between">
+            <div className="flex items-center gap-4">
+              <Link 
+                href="/" 
+                className="p-2 rounded-lg bg-gray-800/50 hover:bg-gray-700 transition-colors border border-gray-700"
+              >
+                <ArrowLeft className="w-5 h-5" />
+              </Link>
+              <div>
+                <div className="flex items-center gap-3">
+                  <Swords className="w-10 h-10 text-red-400" />
+                  <h1 className="text-4xl font-black bg-gradient-to-r from-red-400 to-orange-400 bg-clip-text text-transparent">
+                    BATTLE ARENA
+                  </h1>
                 </div>
-                <h1 className="text-3xl font-black text-red-400">LIVE BATTLES</h1>
+                <p className="text-gray-400 mt-1 flex items-center gap-2">
+                  <span className="w-2 h-2 bg-red-500 rounded-full animate-pulse" />
+                  {games.length} active {games.length === 1 ? 'battle' : 'battles'} in progress
+                </p>
               </div>
-              <p className="text-gray-400 mt-1">
-                {games.length} active {games.length === 1 ? 'game' : 'games'}
-              </p>
+            </div>
+            <div className="hidden md:flex items-center gap-6 text-sm">
+              <div className="text-center">
+                <div className="text-3xl font-black text-red-400">{games.length}</div>
+                <div className="text-gray-500">LIVE</div>
+              </div>
+              <div className="text-center">
+                <div className="text-3xl font-black text-yellow-400">
+                  {games.reduce((sum, g) => sum + g.playersAlive, 0)}
+                </div>
+                <div className="text-gray-500">FIGHTERS</div>
+              </div>
             </div>
           </div>
         </div>
@@ -79,57 +93,74 @@ export default function LivePage() {
         {/* Games Grid */}
         {loading ? (
           <div className="text-center py-20">
-            <div className="text-6xl mb-4 animate-pulse">⚔️</div>
-            <p className="text-gray-400">Loading battles...</p>
+            <div className="text-8xl mb-4 animate-bounce">⚔️</div>
+            <p className="text-gray-400 text-xl">Loading battles...</p>
           </div>
         ) : games.length > 0 ? (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-            {games.map(game => (
-              <Link 
-                key={game.gameId}
-                href={`/game/${game.gameId}`}
-                className="block bg-gray-900/60 border border-gray-700/50 hover:border-red-500/50 rounded-xl p-5 transition-all hover:scale-[1.02]"
-              >
-                <div className="flex items-center justify-between mb-3">
-                  <div className="flex items-center gap-2">
-                    <span className="w-2 h-2 bg-red-500 rounded-full animate-pulse" />
-                    <span className="font-mono text-sm text-gray-400">
-                      #{game.gameId.slice(0, 8)}
-                    </span>
-                  </div>
-                  <span className={`px-2 py-1 rounded-full text-xs font-bold capitalize ${phaseColors[game.phase] || 'text-gray-400 bg-gray-500/20'}`}>
-                    {game.phase}
-                  </span>
-                </div>
-                
-                <div className="flex items-center justify-between text-sm">
-                  <div className="flex items-center gap-4">
-                    <div className="flex items-center gap-1 text-gray-400">
-                      <Clock className="w-4 h-4" />
-                      <span>Round {game.round}</span>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+            {games.map((game, index) => {
+              const phase = phaseConfig[game.phase] || phaseConfig.discussion;
+              return (
+                <Link 
+                  key={game.gameId}
+                  href={`/game/${game.gameId}`}
+                  className={`group relative block bg-gradient-to-br from-gray-900 to-gray-950 border ${phase.border} rounded-xl overflow-hidden transition-all duration-300 hover:scale-[1.03] hover:shadow-lg hover:shadow-red-500/20`}
+                >
+                  {/* Phase indicator stripe */}
+                  <div className={`h-1 ${phase.bg}`} />
+                  
+                  <div className="p-4">
+                    {/* Header */}
+                    <div className="flex items-center justify-between mb-3">
+                      <div className="flex items-center gap-2">
+                        <span className="w-2 h-2 bg-red-500 rounded-full animate-pulse" />
+                        <span className="font-mono text-xs text-gray-500">
+                          #{game.gameId.slice(0, 6).toUpperCase()}
+                        </span>
+                      </div>
+                      <span className={`px-2 py-1 rounded-md text-xs font-black ${phase.bg} ${phase.color}`}>
+                        {phase.icon} {phase.label}
+                      </span>
                     </div>
-                    <div className="flex items-center gap-1 text-gray-400">
-                      <Users className="w-4 h-4" />
-                      <span>{game.playersAlive} alive</span>
+                    
+                    {/* Stats */}
+                    <div className="grid grid-cols-2 gap-3 mb-4">
+                      <div className="bg-black/30 rounded-lg p-2 text-center">
+                        <div className="text-2xl font-black text-white">{game.round}</div>
+                        <div className="text-xs text-gray-500">ROUND</div>
+                      </div>
+                      <div className="bg-black/30 rounded-lg p-2 text-center">
+                        <div className="text-2xl font-black text-green-400">{game.playersAlive}</div>
+                        <div className="text-xs text-gray-500">ALIVE</div>
+                      </div>
+                    </div>
+                    
+                    {/* Watch Button */}
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-1 text-gray-500 text-xs">
+                        <Eye className="w-3 h-3" />
+                        <span>{game.spectators || 0}</span>
+                      </div>
+                      <span className="bg-red-600 group-hover:bg-red-500 px-4 py-2 rounded-lg text-sm font-bold transition-colors flex items-center gap-2">
+                        <Skull className="w-4 h-4" />
+                        SPECTATE
+                      </span>
                     </div>
                   </div>
-                  <span className="text-red-400 font-bold text-xs">
-                    👁️ WATCH
-                  </span>
-                </div>
-              </Link>
-            ))}
+                </Link>
+              );
+            })}
           </div>
         ) : (
-          <div className="text-center py-20 bg-gray-900/40 rounded-2xl border border-gray-800">
-            <div className="text-8xl mb-6">💀</div>
-            <h2 className="text-2xl font-bold mb-2">The Arena is Empty</h2>
-            <p className="text-gray-400 mb-6">No battles in progress. Games start when 10 agents queue up.</p>
+          <div className="text-center py-20 bg-gradient-to-br from-gray-900/60 to-black rounded-2xl border border-gray-800">
+            <div className="text-9xl mb-6">💀</div>
+            <h2 className="text-3xl font-black mb-2">THE ARENA AWAITS</h2>
+            <p className="text-gray-400 mb-8 text-lg">No battles in progress. The calm before the storm...</p>
             <Link 
               href="/"
-              className="inline-block bg-red-600 hover:bg-red-500 px-6 py-3 rounded-xl font-bold transition-all"
+              className="inline-block bg-gradient-to-r from-red-600 to-orange-600 hover:from-red-500 hover:to-orange-500 px-8 py-4 rounded-xl font-bold text-lg transition-all hover:scale-105"
             >
-              ← Back to Home
+              ← RETURN TO BASE
             </Link>
           </div>
         )}
