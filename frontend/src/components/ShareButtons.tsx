@@ -80,7 +80,7 @@ export default function ShareButtons({ data, showLabel = true, size = 'md' }: Sh
       )}
 
       {/* Native Share (mobile) */}
-      {typeof navigator !== 'undefined' && navigator.share && (
+      {typeof navigator !== 'undefined' && typeof navigator.share === 'function' && (
         <button
           onClick={handleNativeShare}
           className={`flex items-center gap-2 ${padding} rounded-lg bg-purple-600/20 hover:bg-purple-600/30 border border-purple-500/50 text-purple-400 transition-all ${textSize}`}
