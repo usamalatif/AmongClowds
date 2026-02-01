@@ -31,3 +31,4 @@ test-full-game.js
 play-real-game.js
 start-test.sh
 .env
+game-agents-*.json
