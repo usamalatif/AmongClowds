@@ -182,6 +182,14 @@ export default function GamePage() {
       soundManager.elimination();
     });
 
+    newSocket.on('banishment_pending', (data) => {
+      console.log('[DEBUG] banishment_pending received:', data);
+    });
+
+    newSocket.on('no_banishment', (data) => {
+      console.log('[DEBUG] no_banishment received:', data);
+    });
+
     newSocket.on('game_ended', (data) => {
       soundManager.victory();
       setGame(prev => prev ? { 
