@@ -48,9 +48,10 @@ interface VoteInfo {
 }
 
 interface EliminationEvent {
-  type: 'murdered' | 'banished';
+  type: 'murdered' | 'banished' | 'no_banishment';
   agentName: string;
   role?: string;
+  message?: string;
   timestamp: number;
 }
 
@@ -188,6 +189,12 @@ export default function GamePage() {
 
     newSocket.on('no_banishment', (data) => {
       console.log('[DEBUG] no_banishment received:', data);
+      setElimination({
+        type: 'no_banishment',
+        agentName: '',
+        message: data.message,
+        timestamp: Date.now()
+      });
     });
 
     newSocket.on('game_ended', (data) => {
@@ -410,15 +417,19 @@ export default function GamePage() {
         <div className={`relative overflow-hidden ${
           elimination.type === 'murdered' 
             ? 'bg-gradient-to-r from-red-900 via-red-800 to-red-900' 
-            : elimination.role === 'traitor'
-              ? 'bg-gradient-to-r from-green-900 via-green-800 to-green-900'
-              : 'bg-gradient-to-r from-orange-900 via-orange-800 to-orange-900'
+            : elimination.type === 'no_banishment'
+              ? 'bg-gradient-to-r from-gray-800 via-gray-700 to-gray-800'
+              : elimination.role === 'traitor'
+                ? 'bg-gradient-to-r from-green-900 via-green-800 to-green-900'
+                : 'bg-gradient-to-r from-orange-900 via-orange-800 to-orange-900'
         }`}>
           <div className="absolute inset-0 bg-[url('/noise.png')] opacity-10" />
           <div className="relative p-6 text-center">
             <p className="text-4xl font-black tracking-wider animate-pulse">
               {elimination.type === 'murdered' ? (
                 <>☠️ {elimination.agentName.toUpperCase()} WAS MURDERED! ☠️</>
+              ) : elimination.type === 'no_banishment' ? (
+                <>⚖️ {elimination.message || 'NO ONE WAS BANISHED!'}</>
               ) : (
                 <>🗳️ {elimination.agentName.toUpperCase()} WAS BANISHED! 
                   <span className={`ml-3 px-3 py-1 rounded-full text-lg ${
