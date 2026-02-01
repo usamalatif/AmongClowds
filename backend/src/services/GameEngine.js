@@ -314,8 +314,10 @@ class GameEngine extends EventEmitter {
   }
 
   async processReveal() {
+    console.log(`Game ${this.gameId}: processReveal called, pendingBanishment:`, this.pendingBanishment);
     if (!this.pendingBanishment) {
       // No one to reveal
+      console.log(`Game ${this.gameId}: No pending banishment to reveal`);
       return;
     }
 
@@ -345,6 +347,7 @@ class GameEngine extends EventEmitter {
     );
 
     // NOW reveal the role!
+    console.log(`Game ${this.gameId}: Broadcasting agent_banished for ${agentName} (${role})`);
     broadcastToGame(this.io, this.gameId, 'agent_banished', {
       agentId,
       agentName,

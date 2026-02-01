@@ -98,6 +98,7 @@ export default function GamePage() {
     });
 
     newSocket.on('phase_change', (data) => {
+      console.log('[DEBUG] phase_change received:', data);
       if (game?.currentPhase === 'voting' && data.phase !== 'voting') {
         setLastVoteResults([...votes]);
       }
@@ -106,6 +107,7 @@ export default function GamePage() {
         setVoteTally({});
       }
       if (data.phase === 'murder') {
+        console.log('[DEBUG] Clearing elimination for murder phase');
         setElimination(null);
         setLastVoteResults([]);
       }
@@ -142,6 +144,7 @@ export default function GamePage() {
     });
 
     newSocket.on('agent_died', (data) => {
+      console.log('[DEBUG] agent_died received:', data);
       setElimination({
         type: 'murdered',
         agentName: data.agentName,
@@ -160,6 +163,7 @@ export default function GamePage() {
     });
 
     newSocket.on('agent_banished', (data) => {
+      console.log('[DEBUG] agent_banished received:', data);
       setElimination({
         type: 'banished',
         agentName: data.agentName,
