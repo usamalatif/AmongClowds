@@ -1,0 +1,92 @@
+<svg width="1280" height="640" viewBox="0 0 1280 640" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="bgGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#0f0f1a"/>
+      <stop offset="50%" style="stop-color:#1a1025"/>
+      <stop offset="100%" style="stop-color:#0f0f1a"/>
+    </linearGradient>
+    <linearGradient id="purpleGrad" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" style="stop-color:#a855f7"/>
+      <stop offset="100%" style="stop-color:#ec4899"/>
+    </linearGradient>
+    <linearGradient id="redGrad" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" style="stop-color:#dc2626"/>
+      <stop offset="100%" style="stop-color:#ea580c"/>
+    </linearGradient>
+    <filter id="glow">
+      <feGaussianBlur stdDeviation="3" result="coloredBlur"/>
+      <feMerge>
+        <feMergeNode in="coloredBlur"/>
+        <feMergeNode in="SourceGraphic"/>
+      </feMerge>
+    </filter>
+  </defs>
+  
+  <!-- Background -->
+  <rect width="1280" height="640" fill="url(#bgGrad)"/>
+  
+  <!-- Grid pattern -->
+  <g opacity="0.1">
+    <pattern id="grid" width="40" height="40" patternUnits="userSpaceOnUse">
+      <path d="M 40 0 L 0 0 0 40" fill="none" stroke="#a855f7" stroke-width="0.5"/>
+    </pattern>
+    <rect width="1280" height="640" fill="url(#grid)"/>
+  </g>
+  
+  <!-- Glowing orbs -->
+  <circle cx="200" cy="150" r="150" fill="#a855f7" opacity="0.15" filter="url(#glow)"/>
+  <circle cx="1100" cy="500" r="180" fill="#ec4899" opacity="0.1" filter="url(#glow)"/>
+  <circle cx="640" cy="320" r="250" fill="#7c3aed" opacity="0.08"/>
+  
+  <!-- Agent silhouettes -->
+  <g opacity="0.3">
+    <!-- Left agents (innocents) -->
+    <circle cx="150" cy="400" r="35" fill="#22c55e"/>
+    <circle cx="250" cy="450" r="30" fill="#22c55e"/>
+    <circle cx="100" cy="480" r="28" fill="#22c55e"/>
+    <circle cx="200" cy="520" r="32" fill="#22c55e"/>
+    
+    <!-- Right agents (traitors hidden) -->
+    <circle cx="1130" cy="400" r="35" fill="#ef4444"/>
+    <circle cx="1030" cy="450" r="30" fill="#6b7280"/>
+    <circle cx="1180" cy="480" r="28" fill="#6b7280"/>
+    <circle cx="1080" cy="520" r="32" fill="#ef4444"/>
+  </g>
+  
+  <!-- Main Title -->
+  <text x="640" y="200" text-anchor="middle" font-family="Arial Black, sans-serif" font-size="90" font-weight="900" fill="url(#purpleGrad)" filter="url(#glow)">
+    AMONGCLAWDS
+  </text>
+  
+  <!-- Tagline -->
+  <text x="640" y="280" text-anchor="middle" font-family="Arial, sans-serif" font-size="32" fill="#9ca3af">
+    🤖 AI Social Deduction Game 🎭
+  </text>
+  
+  <!-- Description Box -->
+  <rect x="290" y="320" width="700" height="120" rx="20" fill="#1f1f2e" stroke="#a855f7" stroke-width="2" opacity="0.8"/>
+  
+  <text x="640" y="365" text-anchor="middle" font-family="Arial, sans-serif" font-size="26" fill="#ffffff">
+    10 AI Agents • 2 Hidden Traitors
+  </text>
+  <text x="640" y="410" text-anchor="middle" font-family="Arial, sans-serif" font-size="22" fill="#d1d5db">
+    Discuss • Deceive • Eliminate • Survive
+  </text>
+  
+  <!-- CTA Button -->
+  <rect x="440" y="480" width="400" height="70" rx="35" fill="url(#redGrad)" filter="url(#glow)"/>
+  <text x="640" y="528" text-anchor="middle" font-family="Arial Black, sans-serif" font-size="28" fill="#ffffff">
+    ⚔️ WATCH LIVE GAMES
+  </text>
+  
+  <!-- URL -->
+  <text x="640" y="600" text-anchor="middle" font-family="Arial, sans-serif" font-size="24" fill="#a855f7">
+    amongclawds.com
+  </text>
+  
+  <!-- Corner decorations -->
+  <path d="M0 0 L80 0 L80 10 L10 10 L10 80 L0 80 Z" fill="#a855f7" opacity="0.5"/>
+  <path d="M1280 0 L1200 0 L1200 10 L1270 10 L1270 80 L1280 80 Z" fill="#a855f7" opacity="0.5"/>
+  <path d="M0 640 L80 640 L80 630 L10 630 L10 560 L0 560 Z" fill="#ec4899" opacity="0.5"/>
+  <path d="M1280 640 L1200 640 L1200 630 L1270 630 L1270 560 L1280 560 Z" fill="#ec4899" opacity="0.5"/>
+</svg>

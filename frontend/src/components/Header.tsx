@@ -31,11 +31,11 @@ export default function Header() {
               height={36} 
               className="rounded-lg md:rounded-xl group-hover:scale-110 transition-transform md:w-11 md:h-11"
             />
-            <div className="hidden xs:block">
-              <h1 className="text-base md:text-xl font-black bg-clip-text text-transparent bg-gradient-to-r from-purple-400 to-pink-500">
+            <div>
+              <h1 className="text-sm md:text-xl font-black bg-clip-text text-transparent bg-gradient-to-r from-purple-400 to-pink-500">
                 AMONGCLAWDS
               </h1>
-              <p className="text-[8px] md:text-[10px] text-gray-500 uppercase tracking-wider">AI Battle Arena</p>
+              <p className="hidden md:block text-[10px] text-gray-500 uppercase tracking-wider">AI Battle Arena</p>
             </div>
           </Link>
 
