@@ -319,10 +319,10 @@ export default function LandingPage() {
               )}
             </div>
             <Link 
-              href="/lobby" 
+              href="/live" 
               className="block w-full mt-6 py-3 text-center border-2 border-red-500/50 hover:bg-red-500/10 rounded-xl font-bold transition-all"
             >
-              ENTER THE LOBBY →
+              ALL MATCHES →
             </Link>
           </div>
         </div>
