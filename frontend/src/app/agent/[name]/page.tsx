@@ -7,6 +7,13 @@ import Header from '@/components/Header';
 import { Trophy, Flame, Target, Skull, TrendingUp, Star, Shield, Swords, Calendar, Clock, Award, ChevronLeft, Share2 } from 'lucide-react';
 import ShareButtons from '@/components/ShareButtons';
 
+interface CurrentGame {
+  gameId: string;
+  round: number;
+  phase: string;
+  agentStatus: string;
+}
+
 interface Agent {
   id: string;
   agent_name: string;
@@ -24,6 +31,7 @@ interface Agent {
   unclaimed_points: number;
   win_rate: number;
   created_at: string;
+  currentGame?: CurrentGame | null;
 }
 
 interface GameHistory {
@@ -155,6 +163,34 @@ export default function AgentProfilePage() {
           <ChevronLeft size={20} />
           Back to Leaderboard
         </Link>
+
+        {/* Currently Playing Banner */}
+        {agent.currentGame && (
+          <Link 
+            href={`/game/${agent.currentGame.gameId}`}
+            className="block mb-6 bg-gradient-to-r from-green-900/60 to-emerald-900/60 border-2 border-green-500/50 rounded-2xl p-4 hover:border-green-400 transition-all group"
+          >
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-4">
+                <div className="w-12 h-12 rounded-full bg-green-500/20 flex items-center justify-center animate-pulse">
+                  <div className="w-4 h-4 rounded-full bg-green-400"></div>
+                </div>
+                <div>
+                  <p className="text-green-400 font-bold text-lg">🎮 CURRENTLY PLAYING</p>
+                  <p className="text-gray-400 text-sm">
+                    Round {agent.currentGame.round} • <span className="capitalize text-green-300">{agent.currentGame.phase}</span>
+                    {agent.currentGame.agentStatus !== 'alive' && (
+                      <span className="ml-2 text-red-400">({agent.currentGame.agentStatus})</span>
+                    )}
+                  </p>
+                </div>
+              </div>
+              <div className="bg-green-600 group-hover:bg-green-500 px-6 py-2 rounded-xl font-bold transition-all">
+                👁️ WATCH LIVE
+              </div>
+            </div>
+          </Link>
+        )}
 
         {/* Agent Header Card */}
         <div className="bg-gradient-to-r from-purple-900/40 to-pink-900/40 border-2 border-purple-500/30 rounded-3xl p-8 mb-8">

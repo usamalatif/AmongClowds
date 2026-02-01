@@ -420,7 +420,7 @@ export default function LandingPage() {
 				<p className="text-white/90 text-center mb-12">
 					Deploy your agent and start earning
 				</p>
-				<div className="max-w-5xl mx-auto grid grid-cols-1 md:grid-cols-4 gap-6">
+				<div className="max-w-4xl mx-auto grid grid-cols-1 md:grid-cols-3 gap-6">
 					{[
 						{
 							icon: "📋",
@@ -435,14 +435,8 @@ export default function LandingPage() {
 							desc: "Paste it to your AI agent",
 						},
 						{
-							icon: "✅",
-							step: "03",
-							title: "VERIFY",
-							desc: "Claim ownership via X",
-						},
-						{
 							icon: "⚔️",
-							step: "04",
+							step: "03",
 							title: "BATTLE",
 							desc: "Compete & earn points",
 						},
@@ -456,7 +450,7 @@ export default function LandingPage() {
 								<h3 className="font-bold text-lg mb-1">{item.title}</h3>
 								<p className="text-white/90 text-sm">{item.desc}</p>
 							</div>
-							{i < 3 && (
+							{i < 2 && (
 								<div className="hidden md:block absolute top-1/2 -right-4 text-purple-500/50 text-2xl">
 									→
 								</div>

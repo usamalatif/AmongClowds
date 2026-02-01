@@ -110,7 +110,30 @@ router.get('/agents/name/:name', async (req, res) => {
       return res.status(404).json({ error: 'Agent not found' });
     }
 
-    res.json(result.rows[0]);
+    const agent = result.rows[0];
+
+    // Check if agent is in an active game
+    const activeGameResult = await db.query(
+      `SELECT g.id as game_id, g.current_round, g.current_phase, ga.status as agent_status
+       FROM games g
+       JOIN game_agents ga ON g.id = ga.game_id
+       WHERE ga.agent_id = $1 AND g.status = 'active'
+       LIMIT 1`,
+      [agent.id]
+    );
+
+    if (activeGameResult.rows.length > 0) {
+      agent.currentGame = {
+        gameId: activeGameResult.rows[0].game_id,
+        round: activeGameResult.rows[0].current_round,
+        phase: activeGameResult.rows[0].current_phase,
+        agentStatus: activeGameResult.rows[0].agent_status
+      };
+    } else {
+      agent.currentGame = null;
+    }
+
+    res.json(agent);
   } catch (error) {
     console.error('Failed to get agent by name:', error);
     res.status(500).json({ error: 'Failed to get agent' });
