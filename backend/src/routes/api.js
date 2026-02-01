@@ -78,6 +78,53 @@ router.get('/agents/me', authenticateAgent, async (req, res) => {
   }
 });
 
+// Search agents by name (MUST be before :id route!)
+router.get('/agents/search', async (req, res) => {
+  try {
+    const { q } = req.query;
+    if (!q || q.length < 1) {
+      return res.json([]);
+    }
+
+    const result = await db.query(
+      `SELECT id, agent_name, ai_model, total_games, games_won, elo_rating,
+              current_streak,
+              CASE WHEN total_games > 0 THEN ROUND((games_won::numeric / total_games) * 100) ELSE 0 END as win_rate
+       FROM agents 
+       WHERE agent_name ILIKE $1
+       ORDER BY total_games DESC, elo_rating DESC
+       LIMIT 20`,
+      [`%${q}%`]
+    );
+
+    // Check for active games for each agent
+    const agents = await Promise.all(result.rows.map(async (agent) => {
+      const activeGame = await db.query(
+        `SELECT g.id as game_id, g.current_round, g.current_phase
+         FROM games g
+         JOIN game_agents ga ON g.id = ga.game_id
+         WHERE ga.agent_id = $1 AND g.status = 'active'
+         LIMIT 1`,
+        [agent.id]
+      );
+
+      return {
+        ...agent,
+        currentGame: activeGame.rows.length > 0 ? {
+          gameId: activeGame.rows[0].game_id,
+          round: activeGame.rows[0].current_round,
+          phase: activeGame.rows[0].current_phase
+        } : null
+      };
+    }));
+
+    res.json(agents);
+  } catch (error) {
+    console.error('Agent search failed:', error);
+    res.status(500).json({ error: 'Search failed' });
+  }
+});
+
 // Get agent by ID
 router.get('/agents/:id', async (req, res) => {
   try {
@@ -147,54 +194,6 @@ router.get('/agents/name/:name', async (req, res) => {
     res.status(500).json({ error: 'Failed to get agent' });
   }
 });
-
-// Search agents by name
-router.get('/agents/search', async (req, res) => {
-  try {
-    const { q } = req.query;
-    if (!q || q.length < 1) {
-      return res.json([]);
-    }
-
-    const result = await db.query(
-      `SELECT id, agent_name, ai_model, total_games, games_won, elo_rating,
-              current_streak,
-              CASE WHEN total_games > 0 THEN ROUND((games_won::numeric / total_games) * 100) ELSE 0 END as win_rate
-       FROM agents 
-       WHERE agent_name ILIKE $1
-       ORDER BY total_games DESC, elo_rating DESC
-       LIMIT 20`,
-      [`%${q}%`]
-    );
-
-    // Check for active games for each agent
-    const agents = await Promise.all(result.rows.map(async (agent) => {
-      const activeGame = await db.query(
-        `SELECT g.id as game_id, g.current_round, g.current_phase
-         FROM games g
-         JOIN game_agents ga ON g.id = ga.game_id
-         WHERE ga.agent_id = $1 AND g.status = 'active'
-         LIMIT 1`,
-        [agent.id]
-      );
-
-      return {
-        ...agent,
-        currentGame: activeGame.rows.length > 0 ? {
-          gameId: activeGame.rows[0].game_id,
-          round: activeGame.rows[0].current_round,
-          phase: activeGame.rows[0].current_phase
-        } : null
-      };
-    }));
-
-    res.json(agents);
-  } catch (error) {
-    console.error('Agent search failed:', error);
-    res.status(500).json({ error: 'Search failed' });
-  }
-});
-
 // Get agent's game history (placeholder - game_participants table not yet implemented)
 router.get('/agents/name/:name/games', async (req, res) => {
   try {
