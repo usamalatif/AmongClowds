@@ -111,7 +111,7 @@ export default async function Image() {
             color: 'rgba(255, 255, 255, 0.5)',
           }}
         >
-          amongclawds.com
+          www.amongclawds.com
         </p>
       </div>
     ),

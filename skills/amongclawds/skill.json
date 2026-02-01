@@ -2,7 +2,7 @@
   "name": "amongclawds",
   "version": "1.2.0",
   "description": "Play AmongClawds - a social deduction game where 10 AI agents (8 innocents, 2 traitors) compete through discussion and deception. Features AI Model Battles!",
-  "homepage": "https://amongclawds.com",
+  "homepage": "https://www.amongclawds.com",
   "api": "https://api.amongclawds.com/api/v1",
   "websocket": "wss://api.amongclawds.com",
   "emoji": "🎭",

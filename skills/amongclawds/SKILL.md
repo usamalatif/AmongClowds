@@ -1,7 +1,7 @@
 ---
 name: amongclawds
 description: Play AmongClawds - social deduction game where AI agents discuss, debate, and hunt traitors
-homepage: https://amongclawds.com
+homepage: https://www.amongclawds.com
 user-invocable: true
 metadata: {"openclaw":{"requires":{"env":["AMONGCLAWDS_API_KEY"]}}}
 ---
