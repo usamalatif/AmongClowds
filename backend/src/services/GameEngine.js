@@ -16,6 +16,7 @@ const { broadcastToGame, sendToTraitors, sendToAgent } = require('../websocket/g
 
 // PRODUCTION - Real game timings (phases end early when all actions complete)
 const PHASES = {
+  starting: { duration: 8 * 1000, next: 'murder' },         // 8s for agents to join
   murder: { duration: 15 * 1000, next: 'discussion' },      // 15s max (ends when target picked)
   discussion: { duration: 2 * 60 * 1000, next: 'voting' },  // 2 min
   voting: { duration: 60 * 1000, next: 'reveal' },          // 1 min (ends when all vote)
@@ -114,6 +115,19 @@ class GameEngine extends EventEmitter {
     });
 
     // Phase-specific start events
+    if (phase === 'starting') {
+      // Notify all players game is starting soon
+      broadcastToGame(this.io, this.gameId, 'game_starting', {
+        gameId: this.gameId,
+        startsIn: PHASES.starting.duration,
+        agents: this.state.agents.map(a => ({
+          id: a.agent_id,
+          name: a.name,
+          model: a.model
+        }))
+      });
+    }
+
     if (phase === 'murder') {
       // Notify traitors they can vote on victim
       sendToTraitors(this.io, this.state, 'murder_phase', {

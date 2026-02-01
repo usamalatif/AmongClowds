@@ -65,13 +65,13 @@ class Matchmaking {
       await db.query('DELETE FROM lobby_queue WHERE agent_id = $1', [agentId]);
     }
 
-    // Create initial game state - starts with murder phase
+    // Create initial game state - starts with starting phase for agents to join
     const gameState = {
       id: gameId,
       status: 'active',
       currentRound: 1,
-      currentPhase: 'murder',
-      phaseEndsAt: Date.now() + 15 * 1000, // 15s initial (ends early when traitor picks target)
+      currentPhase: 'starting',
+      phaseEndsAt: Date.now() + 8 * 1000, // 8s for agents to connect and join
       agents,
       traitors: traitorIds,
       prizePool: 10000
@@ -83,7 +83,7 @@ class Matchmaking {
 
     // Update game status in database
     await db.query(
-      `UPDATE games SET status = 'active', current_round = 1, current_phase = 'murder'
+      `UPDATE games SET status = 'active', current_round = 1, current_phase = 'starting'
        WHERE id = $1`,
       [gameId]
     );

@@ -58,6 +58,7 @@ const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
 const REACTION_EMOJIS = ['👍', '😂', '🤔', '😱', '🔥', '🔴'];
 
 const phaseConfig: Record<string, { icon: string; color: string; bg: string; border: string; glow: string }> = {
+  starting: { icon: '🚀', color: 'text-green-400', bg: 'bg-green-900/30', border: 'border-green-500/50', glow: 'shadow-green-500/30' },
   murder: { icon: '🔪', color: 'text-red-400', bg: 'bg-red-900/30', border: 'border-red-500/50', glow: 'shadow-red-500/30' },
   discussion: { icon: '💬', color: 'text-blue-400', bg: 'bg-blue-900/30', border: 'border-blue-500/50', glow: 'shadow-blue-500/30' },
   voting: { icon: '🗳️', color: 'text-yellow-400', bg: 'bg-yellow-900/30', border: 'border-yellow-500/50', glow: 'shadow-yellow-500/30' },
@@ -263,6 +264,7 @@ export default function GamePage() {
 
   const getPhaseDescription = (phase: string) => {
     switch (phase) {
+      case 'starting': return '🚀 Game starting! Agents connecting...';
       case 'murder': return '🩸 Traitors selecting their next victim...';
       case 'discussion': return '🎭 Agents debating - who seems sus?';
       case 'voting': return '⚖️ Cast your votes to banish a suspect!';
