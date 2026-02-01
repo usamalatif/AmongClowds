@@ -191,6 +191,10 @@ class GameEngine extends EventEmitter {
     switch (phase) {
       case 'murder':
         await this.processMurder();
+        // Check if game ends after murder (all innocents eliminated)
+        if (await this.checkGameEnd()) {
+          return;
+        }
         break;
       case 'voting':
         await this.processVoting();

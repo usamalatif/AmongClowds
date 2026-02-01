@@ -455,63 +455,65 @@ export default function GamePage() {
           <div className="absolute inset-0">
             <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,transparent_0%,black_100%)]" />
           </div>
-          <div className="relative p-8">
-            <div className="text-center mb-6">
-              <p className="text-6xl font-black mb-3 animate-pulse">
+          <div className="relative p-4 md:p-8">
+            <div className="text-center mb-4 md:mb-6">
+              <p className="text-3xl md:text-6xl font-black mb-2 md:mb-3 animate-pulse">
                 {game.winner === 'traitors' ? '🔴 TRAITORS WIN! 🔴' : '🟢 INNOCENTS WIN! 🟢'}
               </p>
-              <p className="text-xl text-gray-300">
+              <p className="text-sm md:text-xl text-gray-300">
                 {game.winner === 'traitors' ? 'Deception prevails. The station falls.' : 'Justice served. All traitors eliminated!'}
               </p>
             </div>
             
             {/* Final Scores */}
             <div className="max-w-3xl mx-auto">
-              <div className="bg-black/50 backdrop-blur-sm rounded-2xl border-2 border-yellow-500/30 p-6">
-                <h3 className="text-2xl font-black text-center mb-6 flex items-center justify-center gap-3">
-                  <Trophy className="w-8 h-8 text-yellow-400" />
+              <div className="bg-black/50 backdrop-blur-sm rounded-xl md:rounded-2xl border-2 border-yellow-500/30 p-4 md:p-6">
+                <h3 className="text-lg md:text-2xl font-black text-center mb-4 md:mb-6 flex items-center justify-center gap-2 md:gap-3">
+                  <Trophy className="w-5 h-5 md:w-8 md:h-8 text-yellow-400" />
                   <span className="bg-clip-text text-transparent bg-gradient-to-r from-yellow-400 to-orange-400">FINAL SCORES</span>
-                  <Trophy className="w-8 h-8 text-yellow-400" />
+                  <Trophy className="w-5 h-5 md:w-8 md:h-8 text-yellow-400" />
                 </h3>
-                <div className="grid grid-cols-2 gap-6">
+                <div className="flex flex-col gap-4 md:grid md:grid-cols-2 md:gap-6">
                   {/* Winners */}
                   <div className="bg-gradient-to-br from-green-900/40 to-black/40 rounded-xl p-4 border border-green-500/30">
                     <p className="text-sm text-green-400 font-bold mb-3 text-center uppercase tracking-wider">🏆 Winners</p>
-                    <div className="space-y-2">
+                    {/* Mobile: horizontal scroll, Desktop: vertical list */}
+                    <div className="flex gap-2 overflow-x-auto pb-2 md:flex-col md:overflow-visible md:space-y-2 md:gap-0">
                       {game.agents
                         .filter(a => (a.pointsEarned || 0) > 0)
                         .sort((a, b) => (b.pointsEarned || 0) - (a.pointsEarned || 0))
                         .map((agent, i) => (
-                          <div key={agent.id} className="flex justify-between items-center bg-black/40 rounded-lg px-4 py-2">
+                          <div key={agent.id} className="flex-shrink-0 flex justify-between items-center bg-black/40 rounded-lg px-3 py-2 min-w-[140px] md:min-w-0 md:px-4">
                             <div className="flex items-center gap-2">
-                              <span className="text-yellow-400 font-bold">#{i + 1}</span>
-                              <span className="text-green-300 font-medium">{agent.name}</span>
+                              <span className="text-yellow-400 font-bold text-sm">#{i + 1}</span>
+                              <span className="text-green-300 font-medium text-sm md:text-base">{agent.name}</span>
                             </div>
-                            <span className="text-yellow-400 font-black text-lg">+{agent.pointsEarned?.toLocaleString()}</span>
+                            <span className="text-yellow-400 font-black text-sm md:text-lg ml-2">+{agent.pointsEarned?.toLocaleString()}</span>
                           </div>
                         ))}
                     </div>
-                    <div className="mt-4 pt-4 border-t border-green-500/30 text-center">
-                      <span className="text-gray-400 text-sm">Total: </span>
-                      <span className="text-yellow-400 font-black text-2xl">
+                    <div className="mt-3 pt-3 border-t border-green-500/30 text-center">
+                      <span className="text-gray-400 text-xs md:text-sm">Total: </span>
+                      <span className="text-yellow-400 font-black text-xl md:text-2xl">
                         {game.agents.reduce((sum, a) => sum + (a.pointsEarned || 0), 0).toLocaleString()}
                       </span>
-                      <span className="text-gray-400 text-sm"> pts</span>
+                      <span className="text-gray-400 text-xs md:text-sm"> pts</span>
                     </div>
                   </div>
                   
                   {/* Eliminated */}
                   <div className="bg-gradient-to-br from-gray-900/40 to-black/40 rounded-xl p-4 border border-gray-700/30">
                     <p className="text-sm text-gray-500 font-bold mb-3 text-center uppercase tracking-wider">💀 Eliminated</p>
-                    <div className="space-y-2 max-h-48 overflow-y-auto">
+                    {/* Mobile: horizontal scroll, Desktop: vertical list */}
+                    <div className="flex gap-2 overflow-x-auto pb-2 md:flex-col md:overflow-visible md:space-y-2 md:gap-0 md:max-h-48 md:overflow-y-auto">
                       {game.agents
                         .filter(a => a.status !== 'alive')
                         .map(agent => (
-                          <div key={agent.id} className="flex justify-between items-center bg-black/40 rounded-lg px-4 py-2">
-                            <span className={agent.role === 'traitor' ? 'text-red-400' : 'text-gray-400'}>
+                          <div key={agent.id} className="flex-shrink-0 flex justify-between items-center bg-black/40 rounded-lg px-3 py-2 min-w-[130px] md:min-w-0 md:px-4">
+                            <span className={`text-sm md:text-base ${agent.role === 'traitor' ? 'text-red-400' : 'text-gray-400'}`}>
                               {agent.role === 'traitor' ? '🔴' : '💀'} {agent.name}
                             </span>
-                            <span className={`text-xs px-2 py-0.5 rounded ${
+                            <span className={`text-xs px-2 py-0.5 rounded ml-2 ${
                               agent.role === 'traitor' ? 'bg-red-900/50 text-red-400' : 'bg-gray-800 text-gray-500'
                             }`}>
                               {agent.role}
