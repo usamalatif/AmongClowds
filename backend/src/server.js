@@ -13,6 +13,7 @@ const db = require('./config/database');
 const redis = require('./config/redis');
 const routes = require('./routes/api');
 const { setupWebSocket } = require('./websocket/gameSocket');
+const GameWatchdog = require('./services/GameWatchdog');
 
 const app = express();
 const server = http.createServer(app);
@@ -100,6 +101,10 @@ async function start() {
 
     server.listen(PORT, () => {
       console.log(`Server running on port ${PORT}`);
+      
+      // Start game watchdog
+      const watchdog = new GameWatchdog(io);
+      watchdog.start();
     });
   } catch (error) {
     console.error('Failed to start server:', error);
