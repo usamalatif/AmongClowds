@@ -424,20 +424,21 @@ export default function GamePage() {
                 : 'bg-gradient-to-r from-orange-900 via-orange-800 to-orange-900'
         }`}>
           <div className="absolute inset-0 bg-[url('/noise.png')] opacity-10" />
-          <div className="relative p-6 text-center">
-            <p className="text-4xl font-black tracking-wider animate-pulse">
+          <div className="relative p-3 md:p-6 text-center">
+            <p className="text-lg md:text-4xl font-black tracking-wider animate-pulse">
               {elimination.type === 'murdered' ? (
                 <>☠️ {elimination.agentName.toUpperCase()} WAS MURDERED! ☠️</>
               ) : elimination.type === 'no_banishment' ? (
                 <>⚖️ {elimination.message || 'NO ONE WAS BANISHED!'}</>
               ) : (
-                <>🗳️ {elimination.agentName.toUpperCase()} WAS BANISHED! 
-                  <span className={`ml-3 px-3 py-1 rounded-full text-lg ${
+                <span className="flex flex-col md:flex-row items-center justify-center gap-2">
+                  <span>🗳️ {elimination.agentName.toUpperCase()} WAS BANISHED!</span>
+                  <span className={`px-2 md:px-3 py-1 rounded-full text-sm md:text-lg ${
                     elimination.role === 'traitor' ? 'bg-red-600 text-white' : 'bg-green-600 text-white'
                   }`}>
                     {elimination.role === 'traitor' ? '🔴 TRAITOR' : '🟢 INNOCENT'}
                   </span>
-                </>
+                </span>
               )}
             </p>
           </div>
@@ -541,29 +542,36 @@ export default function GamePage() {
       )}
 
       {/* Mobile Tab Navigation */}
-      <div className="lg:hidden flex border-b border-gray-800 bg-black/60 sticky top-[52px] z-40">
+      <div className="lg:hidden flex border-b border-gray-800 bg-black/90 backdrop-blur-sm sticky top-0 z-40">
         {[
-          { id: 'chat', label: 'Chat', icon: MessageCircle },
-          { id: 'players', label: 'Players', icon: Users },
-          { id: 'votes', label: 'Votes', icon: Vote },
+          { id: 'chat', label: 'Chat', icon: MessageCircle, count: chat.length },
+          { id: 'players', label: 'Players', icon: Users, count: aliveAgents.length },
+          { id: 'votes', label: 'Votes', icon: Vote, count: votes.length },
         ].map(tab => (
           <button
             key={tab.id}
             onClick={() => setMobileTab(tab.id)}
-            className={`flex-1 flex items-center justify-center gap-2 py-3 text-sm font-medium transition-all ${
+            className={`flex-1 flex items-center justify-center gap-1.5 py-2.5 text-xs font-bold transition-all ${
               mobileTab === tab.id
-                ? 'text-purple-400 border-b-2 border-purple-500 bg-purple-900/20'
-                : 'text-gray-500'
+                ? 'text-purple-400 border-b-2 border-purple-500 bg-purple-900/30'
+                : 'text-gray-500 hover:text-gray-400'
             }`}
           >
-            <tab.icon size={16} />
-            {tab.label}
+            <tab.icon size={14} />
+            <span>{tab.label}</span>
+            {tab.count > 0 && (
+              <span className={`text-[10px] px-1.5 py-0.5 rounded-full ${
+                mobileTab === tab.id ? 'bg-purple-500/30' : 'bg-gray-800'
+              }`}>
+                {tab.count}
+              </span>
+            )}
           </button>
         ))}
       </div>
 
       {/* Main Content */}
-      <div className="relative max-w-7xl mx-auto p-2 md:p-4 grid grid-cols-1 lg:grid-cols-12 gap-2 md:gap-4" style={{ height: 'calc(100vh - 140px)' }}>
+      <div className="relative max-w-7xl mx-auto p-2 md:p-4 grid grid-cols-1 lg:grid-cols-12 gap-2 md:gap-4 h-[calc(100vh-100px)] lg:h-[calc(100vh-140px)]">
         
         {/* Left Sidebar - Hidden on mobile unless tab selected */}
         <div className={`lg:col-span-3 space-y-3 md:space-y-4 overflow-y-auto ${mobileTab !== 'players' ? 'hidden lg:block' : ''}`}>
