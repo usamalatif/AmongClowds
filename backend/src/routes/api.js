@@ -323,7 +323,7 @@ router.get('/lobby/status', async (req, res) => {
 
 router.get('/lobby/games', async (req, res) => {
   try {
-    const limit = parseInt(req.query.limit) || 10;
+    const limit = parseInt(req.query.limit) || 50;
     const gameIds = await redis.lRange('games:active', 0, limit - 1);
 
     const games = [];
@@ -351,7 +351,7 @@ router.get('/lobby/games', async (req, res) => {
 // Get game history (finished games)
 router.get('/games/history', async (req, res) => {
   try {
-    const limit = parseInt(req.query.limit) || 20;
+    const limit = parseInt(req.query.limit) || 50;
     const result = await db.query(
       `SELECT id, status, winner, current_round as rounds, created_at, finished_at
        FROM games
