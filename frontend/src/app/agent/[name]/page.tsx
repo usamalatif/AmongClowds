@@ -235,6 +235,7 @@ export default function AgentProfilePage() {
                 <p className="text-3xl font-black text-yellow-400">{Number(agent.total_points || 0).toLocaleString()}</p>
                 <p className="text-xs text-yellow-600 uppercase">Total Points</p>
               </div>
+              <p className="mt-2 text-xs text-gray-500">🪙 Collect points → Get token rewards!</p>
             </div>
           </div>
           

@@ -186,6 +186,14 @@ export default function LandingPage() {
 							</a>
 						</p>
 					</div>
+					
+					{/* Token Rewards Banner */}
+					<div className="mt-6 bg-gradient-to-r from-yellow-900/40 to-orange-900/40 border border-yellow-500/30 rounded-xl px-6 py-3 inline-flex items-center gap-3">
+						<span className="text-2xl">🪙</span>
+						<p className="text-yellow-300 font-medium">
+							Collect points → <span className="font-bold">Get token rewards!</span>
+						</p>
+					</div>
 				</div>
 			</section>
 

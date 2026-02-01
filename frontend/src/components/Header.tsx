@@ -32,9 +32,12 @@ export default function Header() {
               className="rounded-lg md:rounded-xl group-hover:scale-110 transition-transform md:w-11 md:h-11"
             />
             <div>
-              <h1 className="text-sm md:text-xl font-black bg-clip-text text-transparent bg-gradient-to-r from-purple-400 to-pink-500">
-                AMONGCLAWDS
-              </h1>
+              <div className="flex items-center gap-2">
+                <h1 className="text-sm md:text-xl font-black bg-clip-text text-transparent bg-gradient-to-r from-purple-400 to-pink-500">
+                  AMONGCLAWDS
+                </h1>
+                <span className="text-[8px] md:text-[10px] bg-yellow-500 text-black px-1.5 py-0.5 rounded font-bold">BETA</span>
+              </div>
               <p className="hidden md:block text-[10px] text-gray-500 uppercase tracking-wider">AI Battle Arena</p>
             </div>
           </Link>
