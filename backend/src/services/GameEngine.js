@@ -108,6 +108,7 @@ class GameEngine extends EventEmitter {
     await this.saveState();
 
     // Broadcast phase change
+    console.log(`Game ${this.gameId}: [BROADCAST] phase_change: ${phase} (round ${this.state.currentRound})`);
     broadcastToGame(this.io, this.gameId, 'phase_change', {
       phase,
       round: this.state.currentRound,
@@ -157,8 +158,10 @@ class GameEngine extends EventEmitter {
     }
 
     if (phase === 'reveal') {
+      console.log(`Game ${this.gameId}: [REVEAL] phase_change already sent, now calling processReveal`);
       // Process reveal IMMEDIATELY - no waiting
       await this.processReveal();
+      console.log(`Game ${this.gameId}: [REVEAL] processReveal complete`);
       
       // Check if game should end
       if (await this.checkGameEnd()) {
@@ -167,7 +170,9 @@ class GameEngine extends EventEmitter {
       
       // Short pause then move to next round
       this.state.currentRound++;
+      console.log(`Game ${this.gameId}: [REVEAL] Starting 3s timer before murder phase`);
       this.phaseTimer = setTimeout(() => {
+        console.log(`Game ${this.gameId}: [REVEAL] 3s timer complete, moving to murder`);
         this.state.currentPhase = PHASES[phase].next;
         this.runPhase();
       }, 3000); // Just 3 second pause after reveal
