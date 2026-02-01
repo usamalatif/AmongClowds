@@ -145,10 +145,22 @@ router.post('/lobby/join', authenticateAgent, async (req, res) => {
   try {
     const { agentId } = req.agent;
 
-    // Check if already in queue or game
+    // Check if already in an active game
+    const activeGame = await db.query(
+      `SELECT g.id FROM games g
+       JOIN game_agents ga ON ga.game_id = g.id
+       WHERE ga.agent_id = $1 AND g.status = 'active'`,
+      [agentId]
+    );
+    if (activeGame.rows.length > 0) {
+      return res.status(400).json({ error: 'Already in an active game', gameId: activeGame.rows[0].id });
+    }
+
+    // Check if already in queue
     const inQueue = await redis.zScore('lobby:queue', agentId);
     if (inQueue !== null) {
-      return res.status(400).json({ error: 'Already in queue' });
+      const queueSize = await redis.zCard('lobby:queue');
+      return res.json({ success: true, queue_position: queueSize, already_queued: true });
     }
 
     // Add to queue
@@ -191,6 +203,87 @@ router.post('/lobby/leave', authenticateAgent, async (req, res) => {
     res.json({ success: true });
   } catch (error) {
     res.status(500).json({ error: 'Failed to leave queue' });
+  }
+});
+
+// Debug: Reset lobby and stale games for fresh tournament
+router.post('/lobby/reset', async (req, res) => {
+  try {
+    // Clear Redis queue
+    await redis.del('lobby:queue');
+    
+    // Clear database queue
+    await db.query('DELETE FROM lobby_queue');
+    
+    // Get stale active games (older than 30 min or stuck)
+    const staleGames = await redis.lRange('games:active', 0, -1);
+    let cleaned = 0;
+    
+    for (const gameId of staleGames) {
+      const cached = await redis.get(`game:${gameId}`);
+      if (!cached) {
+        // Game state missing, remove from active list
+        await redis.lRem('games:active', 0, gameId);
+        cleaned++;
+        continue;
+      }
+      
+      const state = JSON.parse(cached);
+      const gameAge = Date.now() - (state.phaseEndsAt || 0);
+      
+      // If game phase ended more than 5 minutes ago, it's stuck
+      if (gameAge > 5 * 60 * 1000) {
+        await redis.lRem('games:active', 0, gameId);
+        await redis.del(`game:${gameId}`);
+        await db.query(`UPDATE games SET status = 'cancelled' WHERE id = $1`, [gameId]);
+        cleaned++;
+      }
+    }
+    
+    const remaining = await redis.lLen('games:active');
+    
+    res.json({
+      success: true,
+      queueCleared: true,
+      staleGamesCleaned: cleaned,
+      activeGamesRemaining: remaining
+    });
+  } catch (error) {
+    console.error('Reset error:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Debug: Force matchmaking attempt
+router.post('/lobby/force-match', async (req, res) => {
+  try {
+    const queueSize = await redis.zCard('lobby:queue');
+    console.log(`[Matchmaking] Force match called. Queue size: ${queueSize}`);
+    
+    if (queueSize < 10) {
+      return res.json({ 
+        success: false, 
+        message: `Need 10 agents, have ${queueSize}`,
+        queueSize 
+      });
+    }
+
+    const Matchmaking = require('../services/Matchmaking');
+    const io = req.app.get('io');
+    
+    console.log('[Matchmaking] Attempting to create game...');
+    const game = await Matchmaking.tryCreateGame(io);
+    
+    if (game) {
+      console.log(`[Matchmaking] Game created: ${game.id}`);
+      res.json({ success: true, gameId: game.id });
+    } else {
+      console.log('[Matchmaking] Failed to create game');
+      res.json({ success: false, message: 'Failed to create game' });
+    }
+  } catch (error) {
+    console.error('[Matchmaking] Error:', error);
+    res.status(500).json({ error: error.message });
   }
 });
 
