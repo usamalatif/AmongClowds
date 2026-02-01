@@ -224,85 +224,83 @@ export default function LobbyPage() {
 
           {/* Live Games - Right Side */}
           <div className="lg:col-span-2">
-            <div className="flex items-center gap-3 mb-6">
-              <div className="relative">
-                <Target className="w-8 h-8 text-red-400" />
-                <span className="absolute -top-1 -right-1 w-3 h-3 bg-red-500 rounded-full animate-ping" />
-                <span className="absolute -top-1 -right-1 w-3 h-3 bg-red-500 rounded-full" />
+            <div className="flex items-center justify-between mb-6">
+              <div className="flex items-center gap-3">
+                <div className="relative">
+                  <Target className="w-8 h-8 text-red-400" />
+                  <span className="absolute -top-1 -right-1 w-3 h-3 bg-red-500 rounded-full animate-ping" />
+                  <span className="absolute -top-1 -right-1 w-3 h-3 bg-red-500 rounded-full" />
+                </div>
+                <h2 className="text-2xl font-black text-red-400">LIVE BATTLES</h2>
+                <span className="text-gray-500 text-sm">({games.length} active)</span>
               </div>
-              <h2 className="text-2xl font-black text-red-400">LIVE BATTLES</h2>
-              <span className="text-gray-500 text-sm">({games.length} active)</span>
             </div>
 
             {games.length > 0 ? (
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                {games.map((game, index) => (
-                  <div 
-                    key={game.gameId} 
-                    className={`group bg-black/60 border-2 rounded-2xl p-5 backdrop-blur-sm transition-all hover:scale-[1.02] hover:shadow-xl ${
-                      index === 0 ? 'border-yellow-500/50 hover:border-yellow-500 hover:shadow-yellow-500/20' : 
-                      'border-purple-500/30 hover:border-purple-500 hover:shadow-purple-500/20'
+              <div className="space-y-3">
+                {games.slice(0, 10).map((game, index) => (
+                  <Link 
+                    key={game.gameId}
+                    href={`/game/${game.gameId}`}
+                    className={`group flex items-center justify-between bg-black/60 border-2 rounded-xl p-4 backdrop-blur-sm transition-all hover:scale-[1.01] ${
+                      index === 0 ? 'border-yellow-500/50 hover:border-yellow-500' : 
+                      'border-gray-700/50 hover:border-purple-500'
                     }`}
                   >
-                    {/* Game Header */}
-                    <div className="flex justify-between items-start mb-4">
+                    <div className="flex items-center gap-4">
+                      {/* Rank/Position */}
+                      <div className={`w-8 h-8 rounded-lg flex items-center justify-center font-bold text-sm ${
+                        index === 0 ? 'bg-yellow-500/20 text-yellow-400' :
+                        index === 1 ? 'bg-gray-500/20 text-gray-400' :
+                        index === 2 ? 'bg-orange-500/20 text-orange-400' :
+                        'bg-gray-800/50 text-gray-500'
+                      }`}>
+                        {index === 0 ? '👑' : `#${index + 1}`}
+                      </div>
+                      
+                      {/* Game Info */}
                       <div>
-                        <div className="flex items-center gap-2 mb-1">
-                          {index === 0 && <Crown className="w-4 h-4 text-yellow-400" />}
-                          <h3 className="font-bold text-lg">
-                            Game #{game.gameId.slice(0, 8)}
-                          </h3>
+                        <div className="flex items-center gap-2">
+                          <span className="w-2 h-2 bg-red-500 rounded-full animate-pulse" />
+                          <span className="font-bold">Game #{game.gameId.slice(0, 8)}</span>
                         </div>
-                        <div className="flex items-center gap-3 text-sm">
-                          <span className="text-gray-400">Round {game.round}</span>
+                        <div className="flex items-center gap-3 text-sm text-gray-400">
+                          <span>Round {game.round}</span>
                           <span className={`flex items-center gap-1 font-medium ${phaseColor[game.phase] || 'text-gray-400'}`}>
-                            {phaseEmoji[game.phase] || '⏳'} {game.phase.toUpperCase()}
+                            {phaseEmoji[game.phase]} {game.phase}
                           </span>
                         </div>
                       </div>
-                      <div className="flex items-center gap-1 text-gray-400 bg-gray-800/50 px-2 py-1 rounded-lg">
-                        <Eye size={14} />
-                        <span className="text-sm">{game.spectators}</span>
-                      </div>
                     </div>
 
-                    {/* Players Status */}
-                    <div className="flex items-center gap-4 mb-4 p-3 bg-gray-900/50 rounded-xl">
-                      <div className="flex items-center gap-2">
-                        <div className="w-3 h-3 bg-green-500 rounded-full animate-pulse" />
-                        <span className="text-green-400 font-bold text-lg">{game.playersAlive}</span>
-                        <span className="text-gray-500 text-sm">alive</span>
+                    {/* Stats */}
+                    <div className="flex items-center gap-6">
+                      <div className="text-center hidden sm:block">
+                        <div className="text-green-400 font-bold">{game.playersAlive}</div>
+                        <div className="text-xs text-gray-500">alive</div>
                       </div>
-                      <div className="flex items-center gap-2">
-                        <Skull className="w-4 h-4 text-gray-500" />
-                        <span className="text-gray-400 font-bold">{10 - game.playersAlive}</span>
-                        <span className="text-gray-500 text-sm">dead</span>
+                      <div className="text-center hidden sm:block">
+                        <div className="text-gray-400 font-bold flex items-center gap-1">
+                          <Eye size={14} /> {game.spectators || 0}
+                        </div>
+                        <div className="text-xs text-gray-500">watching</div>
                       </div>
+                      <span className="bg-red-600 group-hover:bg-red-500 px-4 py-2 rounded-lg text-sm font-bold transition-colors">
+                        👁️ WATCH
+                      </span>
                     </div>
-
-                    {/* Progress/Intensity Indicator */}
-                    <div className="mb-4">
-                      <div className="flex justify-between text-xs text-gray-500 mb-1">
-                        <span>Game Progress</span>
-                        <span>{Math.min(game.round * 10, 100)}%</span>
-                      </div>
-                      <div className="w-full bg-gray-800 rounded-full h-2">
-                        <div
-                          className="bg-gradient-to-r from-green-500 via-yellow-500 to-red-500 h-2 rounded-full transition-all"
-                          style={{ width: `${Math.min(game.round * 10, 100)}%` }}
-                        />
-                      </div>
-                    </div>
-
-                    {/* Watch Button */}
-                    <Link
-                      href={`/game/${game.gameId}`}
-                      className="block w-full text-center bg-gradient-to-r from-red-600 to-pink-600 hover:from-red-500 hover:to-pink-500 py-3 rounded-xl font-bold transition-all transform group-hover:scale-[1.02] shadow-lg"
-                    >
-                      👁️ WATCH LIVE
-                    </Link>
-                  </div>
+                  </Link>
                 ))}
+                
+                {/* View All Button */}
+                {games.length > 10 && (
+                  <Link
+                    href="/live"
+                    className="block w-full text-center py-4 bg-gradient-to-r from-purple-600/20 to-pink-600/20 hover:from-purple-600/30 hover:to-pink-600/30 border-2 border-purple-500/30 hover:border-purple-500 rounded-xl font-bold transition-all"
+                  >
+                    VIEW ALL {games.length} BATTLES →
+                  </Link>
+                )}
               </div>
             ) : (
               <div className="bg-black/60 border-2 border-gray-700/50 rounded-2xl p-12 text-center backdrop-blur-sm">
