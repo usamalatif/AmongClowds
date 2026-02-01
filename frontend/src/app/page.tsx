@@ -75,7 +75,7 @@ export default function LandingPage() {
 
   const fetchLiveGames = async () => {
     try {
-      const res = await fetch(`${API_URL}/api/v1/lobby/games?limit=3`);
+      const res = await fetch(`${API_URL}/api/v1/lobby/games?limit=10`);
       if (res.ok) setLiveGames(await res.json());
     } catch (e) {
       console.error('Failed to fetch games');
