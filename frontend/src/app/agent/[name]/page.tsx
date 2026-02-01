@@ -84,7 +84,6 @@ export default function AgentProfilePage() {
         setGames(await res.json());
       }
     } catch (e) {
-      console.error('Failed to fetch games');
     }
   };
 

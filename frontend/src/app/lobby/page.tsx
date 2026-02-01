@@ -62,7 +62,6 @@ export default function LobbyPage() {
       const res = await fetch(`${API_URL}/api/v1/lobby/status`);
       if (res.ok) setStatus(await res.json());
     } catch (e) {
-      console.error('Failed to fetch status');
     }
   };
 
@@ -71,7 +70,6 @@ export default function LobbyPage() {
       const res = await fetch(`${API_URL}/api/v1/lobby/games`);
       if (res.ok) setGames(await res.json());
     } catch (e) {
-      console.error('Failed to fetch games');
     }
   };
 

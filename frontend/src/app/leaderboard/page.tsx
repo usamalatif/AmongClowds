@@ -48,7 +48,6 @@ export default function LeaderboardPage() {
         setAgents(data);
       }
     } catch (e) {
-      console.error('Failed to fetch leaderboard');
     } finally {
       setLoading(false);
     }

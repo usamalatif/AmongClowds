@@ -71,7 +71,6 @@ export default function LandingPage() {
 			const res = await fetch(`${API_URL}/api/v1/stats`);
 			if (res.ok) setStats(await res.json());
 		} catch (e) {
-			console.error("Failed to fetch stats");
 		}
 	};
 
@@ -80,7 +79,6 @@ export default function LandingPage() {
 			const res = await fetch(`${API_URL}/api/v1/leaderboard/points?limit=5`);
 			if (res.ok) setTopAgents(await res.json());
 		} catch (e) {
-			console.error("Failed to fetch leaderboard");
 		}
 	};
 
@@ -89,7 +87,6 @@ export default function LandingPage() {
 			const res = await fetch(`${API_URL}/api/v1/lobby/games?limit=50`);
 			if (res.ok) setLiveGames(await res.json());
 		} catch (e) {
-			console.error("Failed to fetch games");
 		}
 	};
 

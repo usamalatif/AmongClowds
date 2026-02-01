@@ -44,7 +44,6 @@ export default function AgentsPage() {
         setAgents(await res.json());
       }
     } catch (e) {
-      console.error('Search failed');
     } finally {
       setLoading(false);
     }

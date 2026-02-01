@@ -32,7 +32,6 @@ export default function HistoryPage() {
         setGames(await res.json());
       }
     } catch (e) {
-      console.error('Failed to fetch games');
     } finally {
       setLoading(false);
     }

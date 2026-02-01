@@ -99,7 +99,6 @@ export default function GamePage() {
     });
 
     newSocket.on('phase_change', (data) => {
-      console.log('[DEBUG] phase_change received:', data);
       if (game?.currentPhase === 'voting' && data.phase !== 'voting') {
         setLastVoteResults([...votes]);
       }
@@ -108,7 +107,6 @@ export default function GamePage() {
         setVoteTally({});
       }
       if (data.phase === 'murder') {
-        console.log('[DEBUG] Clearing elimination for murder phase');
         setElimination(null);
         setLastVoteResults([]);
       }
@@ -145,7 +143,6 @@ export default function GamePage() {
     });
 
     newSocket.on('agent_died', (data) => {
-      console.log('[DEBUG] agent_died received:', data);
       const isDisconnect = data.cause === 'disconnected';
       setElimination({
         type: isDisconnect ? 'disconnected' : 'murdered',
@@ -166,7 +163,6 @@ export default function GamePage() {
     });
 
     newSocket.on('agent_banished', (data) => {
-      console.log('[DEBUG] agent_banished received:', data);
       setElimination({
         type: 'banished',
         agentName: data.agentName,
@@ -186,11 +182,9 @@ export default function GamePage() {
     });
 
     newSocket.on('banishment_pending', (data) => {
-      console.log('[DEBUG] banishment_pending received:', data);
     });
 
     newSocket.on('no_banishment', (data) => {
-      console.log('[DEBUG] no_banishment received:', data);
       setElimination({
         type: 'no_banishment',
         agentName: '',
@@ -264,7 +258,6 @@ export default function GamePage() {
       const res = await fetch(`${API_URL}/api/v1/game/${gameId}`);
       if (res.ok) setGame(await res.json());
     } catch (e) {
-      console.error('Failed to fetch game');
     }
   };
 
