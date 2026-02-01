@@ -567,6 +567,13 @@ router.post('/game/:id/murder', authenticateAgent, async (req, res) => {
       { EX: 300 }
     );
 
+    // Check if we can end murder phase early
+    const GameEngine = require('../services/GameEngine');
+    const engine = GameEngine.getEngine(req.params.id);
+    if (engine) {
+      await engine.checkMurderComplete();
+    }
+
     res.json({ success: true });
   } catch (error) {
     res.status(500).json({ error: 'Failed to choose murder' });

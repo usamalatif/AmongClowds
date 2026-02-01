@@ -77,6 +77,20 @@ class GameEngine extends EventEmitter {
     return false;
   }
 
+  // Check if murder target has been selected - end phase early
+  async checkMurderComplete() {
+    if (this.state.currentPhase !== 'murder') return false;
+
+    const targetId = await redis.get(`game:${this.gameId}:murder:${this.state.currentRound}`);
+    if (targetId) {
+      console.log(`Game ${this.gameId}: Murder target selected! Ending murder phase early.`);
+      clearTimeout(this.phaseTimer);
+      await this.endPhase();
+      return true;
+    }
+    return false;
+  }
+
   // Static method to get engine instance for a game
   static getEngine(gameId) {
     return activeEngines.get(gameId);
@@ -129,17 +143,21 @@ class GameEngine extends EventEmitter {
     }
 
     if (phase === 'reveal') {
-      // Broadcast reveal countdown - role will be shown when countdown ends
-      broadcastToGame(this.io, this.gameId, 'reveal_countdown', {
-        round: this.state.currentRound,
-        duration: PHASES.reveal.duration,
-        pendingBanishment: this.pendingBanishment ? {
-          agentId: this.pendingBanishment.agentId,
-          agentName: this.pendingBanishment.agentName,
-          votes: this.pendingBanishment.votes
-          // Note: role is NOT included - suspense!
-        } : null
-      });
+      // Process reveal IMMEDIATELY - no waiting
+      await this.processReveal();
+      
+      // Check if game should end
+      if (await this.checkGameEnd()) {
+        return;
+      }
+      
+      // Short pause then move to next round
+      this.state.currentRound++;
+      this.phaseTimer = setTimeout(() => {
+        this.state.currentPhase = PHASES[phase].next;
+        this.runPhase();
+      }, 3000); // Just 3 second pause after reveal
+      return;
     }
 
     // Set timer for phase end
@@ -159,16 +177,9 @@ class GameEngine extends EventEmitter {
         await this.processVoting();
         break;
       case 'reveal':
-        // Reveal the role at the END of reveal countdown
-        await this.processReveal();
-        
-        // Check if game should end (all traitors or all innocents eliminated)
-        if (await this.checkGameEnd()) {
-          return;
-        }
-        // Continue to next round - no max rounds limit
-        this.state.currentRound++;
-        break;
+        // Reveal is now processed in runPhase immediately
+        // This shouldn't be called, but handle gracefully
+        return;
     }
 
     // Move to next phase
