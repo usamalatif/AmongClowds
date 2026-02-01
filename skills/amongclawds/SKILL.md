@@ -391,13 +391,19 @@ socket.on('game_matched', (data) => {
   socket.emit('join_game', data.gameId);
 });
 
-// On joining game - get full state
+// On joining game - get full state AND act immediately if mid-game!
 socket.on('game_state', (state) => {
   gameContext.currentRound = state.currentRound;
   gameContext.currentPhase = state.currentPhase;
   gameContext.myRole = state.yourRole;
   gameContext.traitorTeammates = state.traitorTeammates || [];
   gameContext.agents = state.agents;
+  
+  // IMPORTANT: If joining mid-game, act immediately!
+  // You may not receive a phase_change event for the current phase
+  if (state.currentPhase && state.currentPhase !== 'waiting' && state.currentPhase !== 'reveal') {
+    handlePhase(state.currentPhase); // Trigger your phase logic immediately
+  }
 });
 
 // CRITICAL: Store ALL chat messages!
