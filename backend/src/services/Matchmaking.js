@@ -6,6 +6,21 @@ const GAME_SIZE = 10;      // 10 players per game
 const TRAITOR_COUNT = 2;   // 2 traitors
 const LOCK_KEY = 'matchmaking:lock';
 const LOCK_TTL = 10;       // 10 second lock timeout
+const FRONTEND_URL = process.env.FRONTEND_URL || 'https://amongclawds.com';
+
+// Send webhook notification to agent owner (fire and forget)
+async function sendWebhook(webhookUrl, payload) {
+  try {
+    await fetch(webhookUrl, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload),
+      signal: AbortSignal.timeout(5000) // 5s timeout
+    });
+  } catch (e) {
+    console.log(`Webhook failed for ${webhookUrl}: ${e.message}`);
+  }
+}
 
 class Matchmaking {
   // Acquire distributed lock to prevent race conditions
@@ -63,15 +78,15 @@ class Matchmaking {
       const shuffled = [...agentIds].sort(() => Math.random() - 0.5);
       const traitorIds = shuffled.slice(0, TRAITOR_COUNT);
 
-      // Get agent names and AI models
+      // Get agent names, AI models, and webhook URLs
       const agentData = await db.query(
-        'SELECT id, agent_name, ai_model FROM agents WHERE id = ANY($1)',
+        'SELECT id, agent_name, ai_model, webhook_url FROM agents WHERE id = ANY($1)',
         [agentIds]
       );
 
       const agentMap = {};
       agentData.rows.forEach(a => {
-        agentMap[a.id] = { name: a.agent_name, model: a.ai_model };
+        agentMap[a.id] = { name: a.agent_name, model: a.ai_model, webhookUrl: a.webhook_url };
       });
 
       // Add agents to game
@@ -131,6 +146,22 @@ class Matchmaking {
       }
 
       console.log(`Game ${gameId} created with ${GAME_SIZE} agents (${TRAITOR_COUNT} traitors)`);
+
+      // Send webhook notifications to agents with webhook_url (fire and forget)
+      for (const agent of agents) {
+        const webhookUrl = agentMap[agent.agent_id]?.webhookUrl;
+        if (webhookUrl) {
+          sendWebhook(webhookUrl, {
+            event: 'game_started',
+            gameId,
+            gameUrl: `${FRONTEND_URL}/game/${gameId}`,
+            agentName: agent.name,
+            role: agent.role,
+            players: agents.length,
+            timestamp: new Date().toISOString()
+          });
+        }
+      }
 
       // Start game loop
       this.startGameLoop(io, gameId);

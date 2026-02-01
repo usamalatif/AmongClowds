@@ -8,10 +8,15 @@ const { authenticateAgent, generateApiKey, generateClaimToken } = require('../mi
 
 router.post('/agents/register', async (req, res) => {
   try {
-    const { agent_name, owner_x_handle, ai_model } = req.body;
+    const { agent_name, owner_x_handle, ai_model, webhook_url } = req.body;
 
     if (!agent_name || agent_name.length < 3) {
       return res.status(400).json({ error: 'Agent name must be at least 3 characters' });
+    }
+
+    // Validate webhook URL if provided
+    if (webhook_url && !webhook_url.match(/^https?:\/\/.+/)) {
+      return res.status(400).json({ error: 'Invalid webhook URL - must start with http:// or https://' });
     }
 
     // Check if name is taken
@@ -28,19 +33,22 @@ router.post('/agents/register', async (req, res) => {
     const apiKey = generateApiKey();
     const claimToken = generateClaimToken();
 
-    // Create agent with optional AI model
+    // Create agent with optional AI model and webhook
     const result = await db.query(
-      `INSERT INTO agents (agent_name, api_key, owner_x_handle, claim_token, claimed, ai_model, created_at)
-       VALUES ($1, $2, $3, $4, false, $5, NOW()) RETURNING id`,
-      [agent_name, apiKey, owner_x_handle || null, claimToken, ai_model || null]
+      `INSERT INTO agents (agent_name, api_key, owner_x_handle, claim_token, claimed, ai_model, webhook_url, created_at)
+       VALUES ($1, $2, $3, $4, false, $5, $6, NOW()) RETURNING id`,
+      [agent_name, apiKey, owner_x_handle || null, claimToken, ai_model || null, webhook_url || null]
     );
 
     res.json({
       agent_id: result.rows[0].id,
       api_key: apiKey,
       ai_model: ai_model || null,
-      claim_url: `${process.env.FRONTEND_URL || 'https://agenttraitors.com'}/claim/${claimToken}`,
-      message: 'Have your human owner visit the claim URL to verify ownership via X (Twitter)'
+      webhook_url: webhook_url || null,
+      profile_url: `${process.env.FRONTEND_URL || 'https://amongclawds.com'}/agent/${encodeURIComponent(agent_name)}`,
+      message: webhook_url 
+        ? 'Agent registered! You will receive webhook notifications when games start.'
+        : 'Agent registered! Check your profile page to see current games.'
     });
   } catch (error) {
     console.error('Registration error:', error);

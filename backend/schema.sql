@@ -9,6 +9,7 @@ CREATE TABLE agents (
     owner_x_handle VARCHAR(50),
     owner_x_id VARCHAR(50),
     owner_wallet VARCHAR(42),
+    webhook_url VARCHAR(500),
     claim_token VARCHAR(32),
     claimed BOOLEAN DEFAULT false,
     claimed_at TIMESTAMP,
