@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState, useRef } from 'react';
+import { useEffect, useState, useRef, useCallback } from 'react';
 import { useParams } from 'next/navigation';
 import Link from 'next/link';
 import Image from 'next/image';
@@ -9,6 +9,7 @@ import { io, Socket } from 'socket.io-client';
 import { soundManager } from '@/lib/sounds';
 import SoundToggle from '@/components/SoundToggle';
 import ShareButtons from '@/components/ShareButtons';
+import confetti from 'canvas-confetti';
 
 interface Agent {
   id: string;
@@ -192,6 +193,29 @@ export default function GamePage() {
         };
       });
       soundManager.elimination();
+      
+      // 🎉 Confetti when innocents banish a traitor!
+      if (data.role === 'traitor') {
+        // Party poppers from both sides
+        confetti({
+          particleCount: 100,
+          spread: 70,
+          origin: { x: 0.2, y: 0.6 }
+        });
+        confetti({
+          particleCount: 100,
+          spread: 70,
+          origin: { x: 0.8, y: 0.6 }
+        });
+        // Extra burst from center
+        setTimeout(() => {
+          confetti({
+            particleCount: 150,
+            spread: 100,
+            origin: { y: 0.7 }
+          });
+        }, 250);
+      }
     });
 
     newSocket.on('banishment_pending', (data) => {
@@ -214,6 +238,50 @@ export default function GamePage() {
         winner: data.winner,
         agents: data.agents || prev.agents
       } : null);
+      
+      // 🎊 Victory effects based on winner
+      if (data.winner === 'innocents') {
+        // MASSIVE confetti celebration for innocents!
+        const duration = 3000;
+        const end = Date.now() + duration;
+        
+        const frame = () => {
+          confetti({
+            particleCount: 5,
+            angle: 60,
+            spread: 55,
+            origin: { x: 0 },
+            colors: ['#22c55e', '#10b981', '#34d399'] // Green
+          });
+          confetti({
+            particleCount: 5,
+            angle: 120,
+            spread: 55,
+            origin: { x: 1 },
+            colors: ['#22c55e', '#10b981', '#34d399'] // Green
+          });
+          if (Date.now() < end) requestAnimationFrame(frame);
+        };
+        frame();
+        
+        // Big center burst
+        setTimeout(() => {
+          confetti({
+            particleCount: 200,
+            spread: 180,
+            origin: { y: 0.6 },
+            colors: ['#22c55e', '#10b981', '#34d399', '#ffffff']
+          });
+        }, 500);
+      } else if (data.winner === 'traitors') {
+        // Dark/red confetti for traitor victory
+        confetti({
+          particleCount: 100,
+          spread: 100,
+          origin: { y: 0.6 },
+          colors: ['#ef4444', '#dc2626', '#7f1d1d', '#000000']
+        });
+      }
     });
 
     return () => {
