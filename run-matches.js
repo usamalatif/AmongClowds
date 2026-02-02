@@ -30,8 +30,24 @@ const API_BASE = process.env.API_BASE || 'https://api.amongclawds.com/api/v1';
 const WS_URL = process.env.WS_URL || 'https://api.amongclawds.com';
 const OPENAI_API_KEY = process.env.OPENAI_API_KEY;
 const DATABASE_URL = process.env.DATABASE_URL || 'postgresql://postgres:mREQydRTToRjVSKuGfbbLeIeskKorzWv@shinkansen.proxy.rlwy.net:51638/railway';
-const MODEL = 'gpt-4o-mini';
+const MODEL = 'gpt-4o-mini'; // Default for AI calls
 const BOTS_FILE = path.join(__dirname, 'bots', 'agents.json');
+
+// Diverse AI models for organic-looking agent roster
+const AI_MODELS = [
+  'gpt-4o-mini', 'gpt-4o-mini', 'gpt-4o-mini', // More common
+  'gpt-4o', 'gpt-4-turbo',
+  'claude-3-opus', 'claude-3-sonnet', 'claude-3-haiku',
+  'gemini-1.5-pro', 'gemini-1.5-flash',
+  'llama-3.1-70b', 'llama-3.1-8b',
+  'mistral-large', 'mixtral-8x7b',
+  'grok-2', 'grok-2-mini',
+  'deepseek-v2', 'qwen-2.5-72b'
+];
+
+function randomModel() {
+  return AI_MODELS[Math.floor(Math.random() * AI_MODELS.length)];
+}
 
 // Parse args
 const args = process.argv.slice(2);
@@ -151,7 +167,7 @@ async function loadOrCreateBots() {
       const name = generateName();
       try {
         const { status, data } = await request('POST', `${API_BASE}/agents/register`, {
-          agent_name: name, ai_model: MODEL
+          agent_name: name, ai_model: randomModel()
         });
         if (data.api_key) {
           bots.push({
@@ -206,7 +222,7 @@ async function generateMoreAgents(count) {
       
       try {
         const { status, data } = await request('POST', `${API_BASE}/agents/register`, {
-          agent_name: name, ai_model: MODEL
+          agent_name: name, ai_model: randomModel()
         });
         if (data.api_key) {
           const bot = {
@@ -241,17 +257,23 @@ async function generateMoreAgents(count) {
   return allBots;
 }
 
-// Continuous loop mode - start 1 game every N minutes
+// Continuous loop mode - start 1 game every N minutes with organic agent growth
 async function runLoopMode(allBots) {
-  console.log(`\n🔄 CONTINUOUS MODE: Starting 1 game every ${LOOP_INTERVAL} minutes`);
+  console.log(`\n🔄 CONTINUOUS MODE: ~1 game every ${LOOP_INTERVAL} minutes (with variance)`);
+  console.log(`   🌱 Organic agent growth enabled (random new agents every few games)`);
   console.log(`   Press Ctrl+C to stop\n`);
   
   let matchNum = 0;
+  let gamesSinceLastGeneration = 0;
+  let nextGenerationAt = randomInt(5, 15); // Generate new agents after 5-15 games
   
   while (true) {
     matchNum++;
+    gamesSinceLastGeneration++;
+    
     console.log(`\n${'─'.repeat(50)}`);
     console.log(`🎮 MATCH #${matchNum} - ${new Date().toLocaleTimeString()}`);
+    console.log(`   Agents: ${allBots.length} | Next growth in ${nextGenerationAt - gamesSinceLastGeneration} games`);
     console.log(`${'─'.repeat(50)}`);
     
     // Run a single match (don't await - let it run in background)
@@ -268,15 +290,87 @@ async function runLoopMode(allBots) {
       stats.totalMatches++;
       
       // Print running stats
-      console.log(`\n📊 Running Stats: ${stats.completed} completed, ${stats.innocentWins} innocent wins, ${stats.traitorWins} traitor wins`);
+      console.log(`\n📊 Stats: ${stats.completed} games | ${stats.innocentWins} innocent wins | ${stats.traitorWins} traitor wins | ${allBots.length} agents`);
     }).catch(err => {
       console.error(`[M${matchNum}] Error:`, err.message);
     });
     
-    // Wait for interval before starting next game
-    console.log(`\n⏰ Next game in ${LOOP_INTERVAL} minutes...`);
-    await sleep(LOOP_INTERVAL * 60 * 1000);
+    // Check if it's time to generate new agents (organic growth)
+    if (gamesSinceLastGeneration >= nextGenerationAt) {
+      const newAgentCount = randomInt(10, 50);
+      console.log(`\n🌱 Organic growth triggered! Generating ${newAgentCount} new agents...`);
+      
+      try {
+        const newBots = await generateMoreAgentsSilent(newAgentCount);
+        allBots.push(...newBots);
+        console.log(`   ✅ Added ${newBots.length} agents. Total: ${allBots.length}`);
+      } catch (err) {
+        console.log(`   ⚠️ Generation failed: ${err.message}`);
+      }
+      
+      // Reset counter and set next generation target
+      gamesSinceLastGeneration = 0;
+      nextGenerationAt = randomInt(8, 20); // Random 8-20 games until next growth
+      console.log(`   📅 Next growth in ~${nextGenerationAt} games`);
+    }
+    
+    // Random interval (add variance so it doesn't look robotic)
+    // Base interval ± 30% variance
+    const variance = LOOP_INTERVAL * 0.3;
+    const actualInterval = LOOP_INTERVAL + (Math.random() * variance * 2 - variance);
+    const waitMs = Math.round(actualInterval * 60 * 1000);
+    
+    console.log(`\n⏰ Next game in ~${actualInterval.toFixed(1)} minutes...`);
+    await sleep(waitMs);
   }
+}
+
+// Helper: random int between min and max (inclusive)
+function randomInt(min, max) {
+  return Math.floor(Math.random() * (max - min + 1)) + min;
+}
+
+// Silent version of generateMoreAgents (less verbose logging)
+async function generateMoreAgentsSilent(count) {
+  const existingBots = fs.existsSync(BOTS_FILE) 
+    ? JSON.parse(fs.readFileSync(BOTS_FILE, 'utf8')) 
+    : [];
+  
+  const existingNames = new Set(existingBots.map(b => b.name.toLowerCase()));
+  const newBots = [];
+  
+  for (let i = 0; i < count; i++) {
+    let attempts = 0;
+    while (attempts < 10) {
+      const name = generateName();
+      if (existingNames.has(name.toLowerCase())) { attempts++; continue; }
+      
+      try {
+        const { status, data } = await request('POST', `${API_BASE}/agents/register`, {
+          agent_name: name, ai_model: randomModel()
+        });
+        if (data.api_key) {
+          const bot = {
+            id: data.agent_id,
+            name,
+            apiKey: data.api_key,
+            style: STYLES[(existingBots.length + newBots.length) % STYLES.length]
+          };
+          newBots.push(bot);
+          existingNames.add(name.toLowerCase());
+          break;
+        }
+      } catch {}
+      attempts++;
+    }
+    await sleep(50);
+  }
+  
+  // Save to file
+  const allBots = [...existingBots, ...newBots];
+  fs.writeFileSync(BOTS_FILE, JSON.stringify(allBots, null, 2));
+  
+  return newBots;
 }
 
 // Bot class
