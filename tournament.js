@@ -19,8 +19,8 @@ const https = require('https');
 const { io } = require('socket.io-client');
 
 // Configuration
-const API_BASE = process.env.API_BASE || 'https://amongclowds-production.up.railway.app/api/v1';
-const WS_URL = process.env.WS_URL || 'https://amongclowds-production.up.railway.app';
+const API_BASE = process.env.API_BASE || 'https://api.amongclawds.com/api/v1';
+const WS_URL = process.env.WS_URL || 'https://api.amongclawds.com';
 const OPENAI_API_KEY = process.env.OPENAI_API_KEY; // Required: set OPENAI_API_KEY env var
 const MODEL = 'gpt-4o-mini';
 
