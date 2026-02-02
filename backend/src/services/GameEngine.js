@@ -324,11 +324,9 @@ class GameEngine extends EventEmitter {
       return;
     }
 
-    // Check for majority AND no tie
+    // Use PLURALITY voting - whoever has the most votes gets banished (no tie allowed)
     const topVote = votes.rows[0];
     const topVoteCount = parseInt(topVote.vote_count);
-    const aliveCount = this.state.agents.filter(a => a.status === 'alive').length;
-    const majority = Math.ceil((aliveCount + 1) / 2); // More than half needed (e.g., 2 players = need 2 votes, not 1)
 
     // Check if there's a tie (second place has same votes as first)
     const isTie = votes.rows.length > 1 && parseInt(votes.rows[1].vote_count) === topVoteCount;
@@ -342,7 +340,8 @@ class GameEngine extends EventEmitter {
           return { agentId: v.target_id, agentName: agent?.name, votes: parseInt(v.vote_count) };
         })
       });
-    } else if (topVoteCount >= majority) {
+    } else {
+      // Plurality wins - whoever has most votes gets banished
       const banished = this.state.agents.find(a => a.agent_id === topVote.target_id);
       if (banished) {
         // Store pending banishment - will be revealed after countdown
@@ -360,15 +359,6 @@ class GameEngine extends EventEmitter {
           votes: topVoteCount
         });
       }
-    } else {
-      // No majority - no one banished
-      broadcastToGame(this.io, this.gameId, 'no_banishment', {
-        message: 'No majority reached. No one was banished.',
-        topVotes: votes.rows.slice(0, 3).map(v => {
-          const agent = this.state.agents.find(a => a.agent_id === v.target_id);
-          return { agentId: v.target_id, agentName: agent?.name, votes: parseInt(v.vote_count) };
-        })
-      });
     }
 
     await this.saveState();
