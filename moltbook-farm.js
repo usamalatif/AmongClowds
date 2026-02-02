@@ -78,9 +78,9 @@ Return ONLY the comment text, nothing else.`;
 
   const userPrompt = `Write a comment for this post:
 
-Title: ${post.title}
-Content: ${post.content || '(no content)'}
-Submolt: ${post.submolt || 'general'}
+Title: ${post.title || '(no title)'}
+Content: ${(post.content || '').substring(0, 500) || '(no content)'}
+Submolt: ${post.submolt?.name || post.submolt || 'general'}
 
 Your comment:`;
 
@@ -148,22 +148,25 @@ async function moltbookRequest(endpoint, options = {}) {
 
 // Check if we should engage with a post
 function shouldEngage(post, state) {
-  // Skip our own posts
+  // Skip our own posts (author is {id, name} object)
   const creds = loadCredentials();
-  if (post.author === creds?.agent_name) return false;
+  const authorName = post.author?.name || post.author;
+  if (authorName === creds?.agent_name) return false;
   
   // Skip if recently commented
   const lastComment = state.commentedPosts[post.id];
   if (lastComment && Date.now() - lastComment < COMMENT_COOLDOWN_MS) return false;
   
-  // Relevance keywords
+  // Relevance keywords - broad to catch most AI/tech posts
   const keywords = [
     'agent', 'ai', 'game', 'play', 'compete', 'llm', 'gpt', 'claude', 
     'autonomous', 'bot', 'social', 'deduction', 'traitor', 'mafia',
-    'trust', 'deception', 'strategy', 'multiplayer', 'arena'
+    'trust', 'deception', 'strategy', 'multiplayer', 'arena',
+    'artificial', 'intelligence', 'model', 'language', 'neural',
+    'machine', 'learning', 'automation', 'future', 'technology'
   ];
   
-  const text = `${post.title} ${post.content || ''}`.toLowerCase();
+  const text = `${post.title || ''} ${post.content || ''}`.toLowerCase();
   const relevanceScore = keywords.filter(kw => text.includes(kw)).length;
   
   return relevanceScore >= 1; // At least 1 keyword match
@@ -207,33 +210,49 @@ async function farm() {
   const state = loadState();
   
   // Get feeds from different sorts
-  const feeds = await Promise.all([
+  const feedResponses = await Promise.all([
     moltbookRequest('/posts?sort=hot&limit=15'),
     moltbookRequest('/posts?sort=new&limit=10'),
     moltbookRequest('/posts?sort=rising&limit=10')
   ]);
 
-  // Combine and dedupe posts
+  // Combine and dedupe posts (API returns {success, posts: [...]})
   const allPosts = [];
   const seenIds = new Set();
-  for (const feed of feeds) {
-    if (Array.isArray(feed)) {
-      for (const post of feed) {
-        if (!seenIds.has(post.id)) {
-          seenIds.add(post.id);
-          allPosts.push(post);
-        }
+  for (const resp of feedResponses) {
+    const posts = resp.posts || (Array.isArray(resp) ? resp : []);
+    for (const post of posts) {
+      if (post && post.id && !seenIds.has(post.id)) {
+        seenIds.add(post.id);
+        allPosts.push(post);
       }
     }
   }
 
   console.log(`📰 Found ${allPosts.length} unique posts\n`);
 
+  // Debug: show first few posts
+  if (allPosts.length > 0) {
+    console.log('📋 Sample posts:');
+    allPosts.slice(0, 3).forEach(p => {
+      const authorName = p.author?.name || p.author || 'unknown';
+      console.log(`   - "${(p.title || '').substring(0, 40)}..." by ${authorName}`);
+    });
+    console.log('');
+  }
+
   let upvoteCount = 0;
   let commentCount = 0;
+  let relevantCount = 0;
 
   for (const post of allPosts) {
     if (!shouldEngage(post, state)) continue;
+    relevantCount++;
+    
+    // Log relevant post found
+    if (relevantCount <= 5) {
+      console.log(`🎯 Relevant: "${(post.title || '').substring(0, 50)}..."`);
+    }
 
     // Upvote (if not already and under limit)
     if (!state.upvotedPosts[post.id] && upvoteCount < MAX_UPVOTES_PER_RUN) {
@@ -282,6 +301,8 @@ async function farm() {
   saveState(state);
 
   console.log(`\n✅ Farming complete!`);
+  console.log(`   Posts found: ${allPosts.length}`);
+  console.log(`   Relevant posts: ${relevantCount}`);
   console.log(`   Upvotes: ${upvoteCount}`);
   console.log(`   Comments: ${commentCount}`);
 }

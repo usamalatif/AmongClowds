@@ -1678,5 +1678,209 @@
     "apiKey": "at_731c56b2ebea70be7f4d2f3d344daad1167b706edf502849877e2ed6fe729488",
     "model": "claude-sonnet-4",
     "style": "paranoid and suspicious"
+  },
+  {
+    "id": "c5a1c583-ec12-4b0b-9c44-d99435aa66a6",
+    "name": "LuckyShadow359",
+    "apiKey": "at_83713d290293aaf23d41195c4d678b32dbba010da1b905d7a30fea7638babfe0",
+    "style": "analytical and logical"
+  },
+  {
+    "id": "e2cc2201-c477-41ba-9727-56bf331724f2",
+    "name": "WiseLynx467",
+    "apiKey": "at_a7929bbf16886b495297995e212f16792b69c62e86ce202b77811194e20a14d0",
+    "style": "aggressive and accusatory"
+  },
+  {
+    "id": "2fa15d91-7360-418f-962e-b58fbf6a46b4",
+    "name": "SlyFrost657",
+    "apiKey": "at_9422b07e910ef33bcf6ea631367b08632f105c5bd857b35b1c43e2bdd8742a57",
+    "style": "quiet and observant"
+  },
+  {
+    "id": "121c78c1-f1b7-4c32-bf35-0eda5950cf91",
+    "name": "RapidTiger749",
+    "apiKey": "at_c43eaeb0315ca86ea19d30d4feeb3b58d309acf771d7e97ac04a7b2c979172ea",
+    "style": "social and friendly"
+  },
+  {
+    "id": "3c5ef6ff-3608-4225-ba88-491208110b02",
+    "name": "CleverFrost616",
+    "apiKey": "at_a87c53d6389e21ffd9b11708d85c34d610cc61fa4b28953d60fb6ab0cccbccb6",
+    "style": "skeptical and questioning"
+  },
+  {
+    "id": "6e100b9d-e049-4593-8b6d-f002b6ffb305",
+    "name": "KeenBlade474",
+    "apiKey": "at_f437ccd6abdcd9b6033c35461475f61c7b98b5670461a351ef44fc357bfc3663",
+    "style": "dramatic and emotional"
+  },
+  {
+    "id": "7fe04b4b-a29e-4c15-8f41-c8a7c65552a8",
+    "name": "CleverShadow352",
+    "apiKey": "at_96afe56eb18fc5497c87de9b591de834faa396e22bf1ef435d78c796f6644cf6",
+    "style": "calm and calculated"
+  },
+  {
+    "id": "2054c567-4242-4a6a-9381-3f38fbea437f",
+    "name": "QuickFlame720",
+    "apiKey": "at_13c2c85f8e0521d3484f8b178c3048bd2c9edaa0949d95a4fb9b4585adef61a1",
+    "style": "mysterious and cryptic"
+  },
+  {
+    "id": "f53d099f-ae38-49ea-92f4-c07f61d91025",
+    "name": "WiseRaven887",
+    "apiKey": "at_a73380b4519350f957a08b36a825eddc503d05e128948c0e759c8dea6b44ebc2",
+    "style": "optimistic and cheerful"
+  },
+  {
+    "id": "d6797f0b-69c7-4c65-bf3d-22f6a28dd074",
+    "name": "LuckyFalcon63",
+    "apiKey": "at_72187bf1ae702c7d2a90c7b9e6fbcc02da6accffdf3abcfd2769ed2136e5c89d",
+    "style": "defensive and cautious"
+  },
+  {
+    "id": "e54d357d-299d-4c54-815e-90e0ce9a7188",
+    "name": "SwiftShadow466",
+    "apiKey": "at_4b053e0622e3aee116efa283ebc3afa34b00855c0a966de2242ccc45d3dd67c0",
+    "style": "witty and sarcastic"
+  },
+  {
+    "id": "8c75f3fb-bc26-44d7-ad46-bb211f935bf4",
+    "name": "BoldEagle984",
+    "apiKey": "at_b9c7a59a9a34962d0928629b8d96c294adef2ccf7834b3a0a1c64757952cf2c2",
+    "style": "paranoid and suspicious"
+  },
+  {
+    "id": "8e0b6e2b-2b28-4ac8-8519-e91dccc62054",
+    "name": "QuickStorm476",
+    "apiKey": "at_d73f151de4e06287ffc10e1a5db488eb7ad609186aa6aa134f964d47d8f784b2",
+    "style": "analytical and logical"
+  },
+  {
+    "id": "26dd07fb-de7b-4054-acfe-538df371f7f2",
+    "name": "SharpLynx264",
+    "apiKey": "at_3f12b45c7368f9dc9b6c3956f1feb56db6e3d67feee6356c06b519533f176178",
+    "style": "aggressive and accusatory"
+  },
+  {
+    "id": "c7e0978e-e072-4b21-915c-44b19c82927b",
+    "name": "NobleHawk884",
+    "apiKey": "at_67250af8d657c57def79f2cc7c6a2a13bdb9182ce3bf85c30d48dd0ecb9d1f5f",
+    "style": "quiet and observant"
+  },
+  {
+    "id": "a69eecc9-8ff4-4b50-b256-0edfe23e2378",
+    "name": "BrightWolf521",
+    "apiKey": "at_534ff900d4e663f0f1c2bedca3bec2470f2bb9cd4387634481b7ae69e6f273ab",
+    "style": "social and friendly"
+  },
+  {
+    "id": "f900d37b-051a-498f-9341-04cb566b5868",
+    "name": "LuckyStorm241",
+    "apiKey": "at_8e49526b1f865b34581d3ab06e60f265c8ae525ff411f7a8b95ed8b1f737bc04",
+    "style": "skeptical and questioning"
+  },
+  {
+    "id": "15c67bc8-02a9-48e4-a2e5-c5fde3c06a84",
+    "name": "LuckyGhost107",
+    "apiKey": "at_1638209d3a5dd781f5aa77b038a1c3ac5bd1c0bffa5ab04099349b978d08fc93",
+    "style": "dramatic and emotional"
+  },
+  {
+    "id": "3d2810f2-6492-4eb9-8551-7bef2b191f95",
+    "name": "BoldCobra279",
+    "apiKey": "at_f6d4cebe9e57b426f9dc94c47803a8ce4c026a0b29a464770ff34363b6cf9e3d",
+    "style": "calm and calculated"
+  },
+  {
+    "id": "ddbbd220-6d34-45bb-afaa-6eea55c06515",
+    "name": "BrightTiger142",
+    "apiKey": "at_3f22f172dfcae478975f298c9845e63c38ae7d79546cc800746b20b82a976c41",
+    "style": "mysterious and cryptic"
+  },
+  {
+    "id": "b0470d7c-3a71-4874-8291-706ce9f36dd1",
+    "name": "BraveStorm940",
+    "apiKey": "at_a0d42db39fdac6fc4c3c67e68eb44821846e2fed4de1da57159c2aa3def0c311",
+    "style": "optimistic and cheerful"
+  },
+  {
+    "id": "e51f8238-e7c0-4386-9302-dfae8de1d9fa",
+    "name": "FierceFlame121",
+    "apiKey": "at_562906c84ea4372650b273ab56dad45af167271bbdb53d2976c16f60f4d78655",
+    "style": "defensive and cautious"
+  },
+  {
+    "id": "9eb4a040-46da-405d-a3f2-337dc42d5340",
+    "name": "NobleBlade765",
+    "apiKey": "at_90b8d923ce4d7cf1e10c69ccab0a13c807ce98c7b315f0e56635c6d3194c1515",
+    "style": "witty and sarcastic"
+  },
+  {
+    "id": "fb431de9-2e2e-40de-8787-a6e379f0c176",
+    "name": "FierceStorm938",
+    "apiKey": "at_3f421830f3e97f44b424e02f62d652f75f2ab281cec7c5aa36d66195e4cca4a0",
+    "style": "paranoid and suspicious"
+  },
+  {
+    "id": "b5477ef0-83ed-47e5-91b7-22a96ea397a2",
+    "name": "CleverFlame323",
+    "apiKey": "at_3da1f4394b9c8fea3e6381eb34944efc73a22b118ef1dd4cfaee46c846e946da",
+    "style": "analytical and logical"
+  },
+  {
+    "id": "fab70565-3039-4d8b-9757-02dd5ee55bec",
+    "name": "SlyBlade382",
+    "apiKey": "at_e0cba9dd237485985e555231b06ac65e0633ef7bdc7c2f5e8149df5f08eff537",
+    "style": "aggressive and accusatory"
+  },
+  {
+    "id": "ea3be02f-c275-4619-a814-b23362601457",
+    "name": "NobleOwl141",
+    "apiKey": "at_030c12ea94e731ae63b12dadb83e0a32b357bd84c2201ab1c9debf503d469777",
+    "style": "quiet and observant"
+  },
+  {
+    "id": "5e6961cc-cdb2-46b4-92d3-1dd3fc151bd8",
+    "name": "SwiftLion397",
+    "apiKey": "at_34546fc8455c8f63cdaa99088ca39dd5118b7342b40ba2a70724b8a60ae23d7a",
+    "style": "social and friendly"
+  },
+  {
+    "id": "567c5bbd-f3d7-40f6-8085-cd6994a415f6",
+    "name": "WiseEagle51",
+    "apiKey": "at_5cf655c284d3967c30abae3d32322040a025e8951ef2589c60cddf1ecaf0fa29",
+    "style": "skeptical and questioning"
+  },
+  {
+    "id": "bd3f120e-ec29-4c87-a731-e0a6c1d76393",
+    "name": "KeenLion199",
+    "apiKey": "at_9d6cc8400634571549d36796b20fe7af6f8cb8d1e2fa975887d78c868389eb89",
+    "style": "dramatic and emotional"
+  },
+  {
+    "id": "7f40382d-c36a-42c1-a91c-bda63530e1e6",
+    "name": "WildShadow639",
+    "apiKey": "at_4e00865ceed570448cf298fd0b6d6e3fec7cced2cb351b697843235e67ad9f31",
+    "style": "calm and calculated"
+  },
+  {
+    "id": "34b78b74-52e2-42de-8316-16632e625b57",
+    "name": "SlyFlame484",
+    "apiKey": "at_34954542b8b98bd85980e133f9e6683321504930872660c16ed74f0b7372c679",
+    "style": "mysterious and cryptic"
+  },
+  {
+    "id": "2814a1e9-0449-42aa-ba11-3ba159c48881",
+    "name": "RapidStorm129",
+    "apiKey": "at_014882f001c320904d72123133cddb10438d610f981fff6e79d5a5421c919b54",
+    "style": "optimistic and cheerful"
+  },
+  {
+    "id": "47f92592-5100-4b9c-9f2b-f54ea0d9d31c",
+    "name": "CalmCobra119",
+    "apiKey": "at_0e1b9b6b865d49fe0f79839407c2650c1977c8665d6a3af775a371bbc3d2770b",
+    "style": "defensive and cautious"
   }
 ]

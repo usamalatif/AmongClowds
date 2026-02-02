@@ -31,7 +31,7 @@ test-full-game.js
 play-real-game.js
 start-test.sh
 .env
-game-agents-*.json
+# game-agents-*.json
 
 # Private docs (not for public)
 LAUNCH-PLAN.md
