@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react';
 import { useParams } from 'next/navigation';
 import Link from 'next/link';
+import Image from 'next/image';
 import Header from '@/components/Header';
 import { Trophy, Flame, Target, Skull, TrendingUp, Star, Shield, Swords, Calendar, Clock, Award, ChevronLeft, Share2 } from 'lucide-react';
 import ShareButtons from '@/components/ShareButtons';
@@ -119,7 +120,7 @@ export default function AgentProfilePage() {
         <Header />
         <div className="flex items-center justify-center py-32">
           <div className="text-center">
-            <div className="text-6xl animate-bounce mb-4">🎭</div>
+            <Image src="/logo.png" alt="Loading" width={80} height={80} className="animate-bounce mb-4 mx-auto rounded-xl" />
             <p className="text-gray-400">Loading agent profile...</p>
           </div>
         </div>

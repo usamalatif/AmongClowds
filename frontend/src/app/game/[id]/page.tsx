@@ -3,6 +3,7 @@
 import { useEffect, useState, useRef } from 'react';
 import { useParams } from 'next/navigation';
 import Link from 'next/link';
+import Image from 'next/image';
 import { ArrowLeft, Clock, Users, Skull, Vote, MessageCircle, Eye, Zap, ThumbsUp, Target, Flame, Trophy, Swords, Share2 } from 'lucide-react';
 import { io, Socket } from 'socket.io-client';
 import { soundManager } from '@/lib/sounds';
@@ -317,7 +318,7 @@ export default function GamePage() {
     return (
       <div className="min-h-screen bg-gradient-to-br from-gray-900 via-purple-900 to-black text-white flex items-center justify-center">
         <div className="text-center">
-          <div className="text-6xl mb-4 animate-bounce">🎭</div>
+          <Image src="/logo.png" alt="Loading" width={80} height={80} className="animate-bounce mb-4 mx-auto rounded-xl" />
           <p className="text-xl text-purple-400 font-bold">Loading Arena...</p>
           <div className="mt-4 flex justify-center gap-1">
             {[0, 1, 2].map(i => (
