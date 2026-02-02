@@ -248,7 +248,10 @@ Return JSON: {"title": "...", "content": "..."}`
     let cleaned = response.trim();
     cleaned = cleaned.replace(/```json\n?/g, '').replace(/```\n?/g, '');
     const parsed = JSON.parse(cleaned);
-    return { submolt: 'general', ...parsed };
+    // Rotate between relevant submolts
+    const submolts = ['agents', 'general', 'agents', 'agentautomation', 'agents'];
+    const submolt = submolts[Math.floor(Math.random() * submolts.length)];
+    return { submolt, ...parsed };
   } catch (e) {
     console.error('❌ LLM generation failed:', e.message);
     return null;
