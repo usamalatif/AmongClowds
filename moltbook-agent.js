@@ -14,6 +14,7 @@ const fs = require('fs');
 const path = require('path');
 const https = require('https');
 
+// IMPORTANT: Must use www.moltbook.com - without www redirects strip auth headers!
 const MOLTBOOK_API = 'https://www.moltbook.com/api/v1';
 const AMONGCLAWDS_API = 'https://api.amongclawds.com/api/v1';
 const CREDENTIALS_FILE = path.join(__dirname, '.moltbook-credentials.json');
@@ -110,21 +111,35 @@ async function register() {
     })
   });
   
+  console.log('API Response:', JSON.stringify(result, null, 2));
+  
   if (result.error) {
     console.error('❌ Registration failed:', result.error);
+    if (result.hint) console.log('💡 Hint:', result.hint);
+    if (result.retry_after_seconds) {
+      const hours = Math.ceil(result.retry_after_seconds / 3600);
+      console.log(`⏰ Try again in ~${hours} hours`);
+    }
+    return;
+  }
+  
+  // Handle response structure
+  const agent = result.agent || result;
+  if (!agent.api_key) {
+    console.error('❌ No API key in response');
     return;
   }
   
   saveCredentials({
-    api_key: result.agent.api_key,
+    api_key: agent.api_key,
     agent_name: AGENT_NAME,
-    claim_url: result.agent.claim_url,
-    verification_code: result.agent.verification_code
+    claim_url: agent.claim_url,
+    verification_code: agent.verification_code
   });
   
   console.log('\n🎉 Registration successful!\n');
-  console.log('📋 Claim URL:', result.agent.claim_url);
-  console.log('🔑 Verification code:', result.agent.verification_code);
+  console.log('📋 Claim URL:', agent.claim_url);
+  console.log('🔑 Verification code:', agent.verification_code);
   console.log('\n👉 Send the claim URL to your human to verify ownership via Twitter');
 }
 
@@ -311,14 +326,48 @@ async function generatePostContent() {
   return posts;
 }
 
+// Create a link post (to share URLs)
+async function createLinkPost(title, url, submolt = 'agents') {
+  console.log(`\n🔗 Posting link: "${title}"`);
+  console.log(`   URL: ${url}`);
+  
+  const result = await moltbookRequest('/posts', {
+    method: 'POST',
+    body: JSON.stringify({ submolt, title, url })
+  });
+  
+  if (result.error) {
+    console.error('❌ Link post failed:', result.error);
+    if (result.hint) console.log('💡 Hint:', result.hint);
+    return null;
+  }
+  
+  const postId = result.id || result.post?.id;
+  console.log('✅ Link posted!');
+  if (postId) console.log(`   🔗 https://www.moltbook.com/post/${postId}`);
+  return result;
+}
+
 // Post to Moltbook
 async function createPost(post) {
   console.log(`\n📝 Posting: "${post.title}"`);
   console.log(`   Content preview: ${post.content.substring(0, 100)}...`);
   
+  // Include URL for link posts
+  const postData = {
+    submolt: post.submolt || 'agents',
+    title: post.title,
+    content: post.content
+  };
+  
+  // Add URL if it's a link-style post about AmongClawds
+  if (post.content.includes('amongclawds.com')) {
+    postData.url = 'https://amongclawds.com';
+  }
+  
   const result = await moltbookRequest('/posts', {
     method: 'POST',
-    body: JSON.stringify(post)
+    body: JSON.stringify(postData)
   });
   
   if (result.error) {
@@ -447,18 +496,30 @@ async function main() {
       const gameStats = await getAmongClawdsStats();
       console.log('AmongClawds Stats:', gameStats);
       break;
+    
+    case 'link':
+      // Post a direct link to AmongClawds
+      const linkStatus = await checkStatus();
+      if (linkStatus !== 'claimed') {
+        console.error('❌ Agent not claimed yet. Complete verification first.');
+        return;
+      }
+      const linkTitle = arg || '🎭 AmongClawds - Watch AI agents play social deduction LIVE';
+      await createLinkPost(linkTitle, 'https://amongclawds.com', 'agents');
+      break;
       
     default:
       console.log(`
 🦞 AmongClawds Moltbook Agent (LLM-powered)
 
 Commands:
-  register     - Register on Moltbook (first time)
+  register     - Register on Moltbook (first time, 1/day limit)
   status       - Check claim status
   post         - Post one random LLM-generated update
   post <type>  - Post specific type:
                  live/stats/recruitment/leaderboard/drama/announcement/controversial
   post-all     - Post all generated content
+  link [title] - Post a direct link to AmongClawds
   preview      - Preview generated posts without posting
   feed         - Check feed for engagement opportunities
   stats        - Show AmongClawds stats
@@ -468,6 +529,7 @@ Examples:
   node moltbook-agent.js post
   node moltbook-agent.js post drama
   node moltbook-agent.js post controversial
+  node moltbook-agent.js link "🔴 AI agents playing Among Us LIVE"
   node moltbook-agent.js preview
       `);
   }
