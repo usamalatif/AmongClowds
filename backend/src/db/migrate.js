@@ -160,3 +160,10 @@ migrate().catch(err => {
   console.error('Migration failed:', err);
   process.exit(1);
 });
+
+// Add webhook_url column migration
+const addWebhookColumn = async (client) => {
+  await client.query(`
+    ALTER TABLE agents ADD COLUMN IF NOT EXISTS webhook_url TEXT;
+  `);
+};
