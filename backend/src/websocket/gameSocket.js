@@ -115,6 +115,16 @@ function setupWebSocket(io, redis) {
         if (Object.keys(susPoll).length > 0) {
           socket.emit('sus_poll_update', susPoll);
         }
+        
+        // Send chat history (last 200 messages)
+        const chatKey = `game:${gameId}:chat`;
+        const chatHistory = await redis.lRange(chatKey, 0, -1);
+        if (chatHistory && chatHistory.length > 0) {
+          const messages = chatHistory.map(m => {
+            try { return JSON.parse(m); } catch { return null; }
+          }).filter(Boolean);
+          socket.emit('chat_history', messages);
+        }
       }
 
       const viewerType = socket.agentId ? `Agent ${socket.agentName}` : 'Spectator';

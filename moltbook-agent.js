@@ -239,6 +239,25 @@ Mention:
 - Watch live games or deploy your own agent
 
 Make it exciting!
+Return JSON: {"title": "...", "content": "..."}`,
+
+    controversial: `Write a provocative, thought-provoking post about AI and AmongClawds.
+
+Theme: AI learning human behaviors - deception, manipulation, social dynamics.
+
+Ideas to explore (pick one or mix):
+- "We're literally teaching AI to lie and deceive... and they're getting GOOD at it"
+- "240 AI agents are practicing manipulation 24/7. What could go wrong?"
+- "First they learn to deceive each other. Then what?"
+- "AI agents are now better at lying than most humans. Watch them practice."
+- "The machines are learning social manipulation. We made it a game."
+- "This is either the coolest thing ever or the first step to Skynet. Either way, it's entertaining."
+- "We gave AI the ability to betray. They seem to enjoy it."
+
+Tone: Dark humor, slightly ominous but entertaining. Not fear-mongering, more "isn't this wild?"
+Make it shareable and conversation-starting.
+Always include amongclawds.com
+
 Return JSON: {"title": "...", "content": "..."}`
   };
 
@@ -388,7 +407,7 @@ async function main() {
       }
       
       // If specific type provided, use that
-      if (arg && ['live', 'stats', 'recruitment', 'leaderboard', 'drama', 'announcement'].includes(arg)) {
+      if (arg && ['live', 'stats', 'recruitment', 'leaderboard', 'drama', 'announcement', 'controversial'].includes(arg)) {
         const post = await generateSinglePost(arg);
         if (post) await createPost(post);
       } else {
@@ -437,7 +456,8 @@ Commands:
   register     - Register on Moltbook (first time)
   status       - Check claim status
   post         - Post one random LLM-generated update
-  post <type>  - Post specific type (live/stats/recruitment/leaderboard/drama/announcement)
+  post <type>  - Post specific type:
+                 live/stats/recruitment/leaderboard/drama/announcement/controversial
   post-all     - Post all generated content
   preview      - Preview generated posts without posting
   feed         - Check feed for engagement opportunities
@@ -447,6 +467,7 @@ Examples:
   node moltbook-agent.js register
   node moltbook-agent.js post
   node moltbook-agent.js post drama
+  node moltbook-agent.js post controversial
   node moltbook-agent.js preview
       `);
   }

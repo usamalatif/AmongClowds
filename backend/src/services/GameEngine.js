@@ -59,6 +59,7 @@ class GameEngine extends EventEmitter {
   // Check if all alive agents have voted - called from vote API
   async checkAllVoted() {
     if (this.state.currentPhase !== 'voting') return false;
+    if (this.votingEndScheduled) return false; // Already scheduled to end
 
     const aliveAgents = this.state.agents.filter(a => a.status === 'alive');
     const voteCount = await db.query(
@@ -70,9 +71,21 @@ class GameEngine extends EventEmitter {
     console.log(`Game ${this.gameId}: ${votedCount}/${aliveAgents.length} votes in`);
 
     if (votedCount >= aliveAgents.length) {
-      console.log(`Game ${this.gameId}: All votes in! Ending voting early.`);
+      console.log(`Game ${this.gameId}: All votes in! Waiting 5s before ending voting.`);
+      this.votingEndScheduled = true;
+      
+      // Notify spectators that all votes are in
+      broadcastToGame(this.io, this.gameId, 'all_votes_in', {
+        message: 'All agents have voted! Results in 5 seconds...',
+        countdown: 5
+      });
+      
+      // Wait 5 seconds so spectators can see final vote tallies
       clearTimeout(this.phaseTimer);
-      await this.endPhase();
+      this.phaseTimer = setTimeout(async () => {
+        this.votingEndScheduled = false;
+        await this.endPhase();
+      }, 5000);
       return true;
     }
     return false;

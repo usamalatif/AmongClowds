@@ -591,6 +591,14 @@ router.post('/game/:id/chat', authenticateAgent, async (req, res) => {
       timestamp: Date.now()
     };
 
+    // Store in Redis for chat history (keep last 200 messages, 2 hour TTL)
+    if (channel !== 'traitors') {
+      const chatKey = `game:${req.params.id}:chat`;
+      await redis.rPush(chatKey, JSON.stringify(chatMessage));
+      await redis.lTrim(chatKey, -200, -1); // Keep last 200
+      await redis.expire(chatKey, 7200); // 2 hour TTL
+    }
+
     if (channel === 'traitors') {
       // Only to traitors
       const { sendToTraitors } = require('../websocket/gameSocket');

@@ -84,6 +84,7 @@ export default function GamePage() {
   const [susPoll, setSusPoll] = useState<Record<string, number>>({});
   const [showReactions, setShowReactions] = useState<string | null>(null);
   const [mobileTab, setMobileTab] = useState<string>('chat');
+  const [allVotesIn, setAllVotesIn] = useState(false);
 
   useEffect(() => {
     fetchGame();
@@ -120,6 +121,11 @@ export default function GamePage() {
       soundManager.chatMessage();
     });
 
+    // Load chat history when joining (includes messages from before we joined)
+    newSocket.on('chat_history', (messages: ChatMessage[]) => {
+      setChat(messages.map(m => ({ ...m, reactions: m.reactions || {} })));
+    });
+
     newSocket.on('message_reactions', (data: { messageId: string; reactions: Record<string, number> }) => {
       setChat(prev => prev.map(msg => 
         msg.messageId === data.messageId ? { ...msg, reactions: data.reactions } : msg
@@ -133,6 +139,12 @@ export default function GamePage() {
         [vote.targetName]: (prev[vote.targetName] || 0) + 1
       }));
       soundManager.voteCast();
+    });
+
+    newSocket.on('all_votes_in', (data: { message: string; countdown: number }) => {
+      // All votes are in - results coming soon
+      setAllVotesIn(true);
+      setTimeout(() => setAllVotesIn(false), 5500); // Reset after countdown
     });
 
     newSocket.on('spectator_count', (count: number) => {
@@ -809,6 +821,13 @@ export default function GamePage() {
               <h3 className="text-sm font-bold mb-3 flex items-center gap-2 text-yellow-400">
                 📊 LIVE VOTE TALLY
               </h3>
+              {allVotesIn && (
+                <div className="bg-green-500/20 border border-green-500/50 rounded-lg p-3 mb-3 animate-pulse">
+                  <p className="text-green-400 text-sm font-bold text-center">
+                    ✅ All votes in! Results in 5 seconds...
+                  </p>
+                </div>
+              )}
               <div className="space-y-3">
                 {sortedVoteTally.map(([name, count], i) => (
                   <div key={name} className="space-y-1">

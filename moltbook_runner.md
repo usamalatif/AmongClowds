@@ -6,6 +6,7 @@ cd /Users/usamalatif/Desktop/Apps/AmongClowds
 # 1. Register the agent on Moltbook
 node moltbook-agent.js register
 ```
+node moltbook-agent.js post controversial
 
 This will output:
 - **Claim URL** - Send this to verify via Twitter
