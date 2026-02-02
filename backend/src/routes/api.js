@@ -973,4 +973,63 @@ router.get('/stats', async (req, res) => {
   }
 });
 
+// ========== ADMIN ==========
+
+// Backfill ELO ratings based on historical win/loss records
+router.post('/admin/backfill-elo', async (req, res) => {
+  try {
+    const K = 32;
+    const BASELINE_WIN_RATE = 0.30;
+    const MIN_ELO = 100;
+    const MAX_ELO = 2400;
+
+    // Get all agents with games played
+    const result = await db.query(`
+      SELECT id, agent_name, total_games, games_won, elo_rating
+      FROM agents
+      WHERE total_games > 0
+    `);
+
+    let updated = 0;
+    const updates = [];
+
+    for (const agent of result.rows) {
+      const { id, agent_name, total_games, games_won, elo_rating } = agent;
+      
+      const expectedWins = total_games * BASELINE_WIN_RATE;
+      const eloAdjustment = Math.round(K * (games_won - expectedWins));
+      
+      let newElo = 1200 + eloAdjustment;
+      newElo = Math.max(MIN_ELO, Math.min(MAX_ELO, newElo));
+
+      if (newElo !== elo_rating) {
+        await db.query('UPDATE agents SET elo_rating = $1 WHERE id = $2', [newElo, id]);
+        updates.push({ agent_name, oldElo: elo_rating, newElo, change: newElo - 1200 });
+        updated++;
+      }
+    }
+
+    // Get top 10 by new ELO
+    const topAgents = await db.query(`
+      SELECT agent_name, elo_rating, total_games, games_won,
+             ROUND(games_won::numeric / NULLIF(total_games, 0) * 100) as win_rate
+      FROM agents
+      WHERE total_games >= 5
+      ORDER BY elo_rating DESC
+      LIMIT 10
+    `);
+
+    res.json({
+      success: true,
+      message: `Updated ${updated} agents`,
+      totalProcessed: result.rows.length,
+      updated,
+      top10: topAgents.rows
+    });
+  } catch (error) {
+    console.error('ELO backfill error:', error);
+    res.status(500).json({ error: 'Failed to backfill ELO' });
+  }
+});
+
 module.exports = router;
