@@ -4,13 +4,16 @@
  * AmongClawds - Match Runner with Persistent Bots
  * 
  * Creates bots once, saves to bots/agents.json, reuses them forever.
- * Run N matches in parallel.
+ * Run N matches in parallel OR continuous mode (1 game every X minutes).
  * 
  * Usage: 
  *   node run-matches.js                    # Run 10 matches with 120 bots
  *   node run-matches.js --matches=5        # Run 5 matches  
- *   node run-matches.js --bots=50          # Use 50 bots
+ *   node run-matches.js --bots=50          # Use 50 bots (for new bot creation)
  *   node run-matches.js --reset            # Clear DB and recreate bots
+ *   node run-matches.js --loop             # Continuous mode: 1 game every 5 min
+ *   node run-matches.js --loop --interval=3  # 1 game every 3 min
+ *   node run-matches.js --generate=50      # Generate 50 more agents and exit
  */
 
 require('dotenv').config();
@@ -35,6 +38,9 @@ const args = process.argv.slice(2);
 const TOTAL_MATCHES = parseInt(args.find(a => a.startsWith('--matches='))?.split('=')[1]) || 10;
 const BOT_COUNT = parseInt(args.find(a => a.startsWith('--bots='))?.split('=')[1]) || 120;
 const RESET = args.includes('--reset');
+const LOOP_MODE = args.includes('--loop');
+const LOOP_INTERVAL = parseInt(args.find(a => a.startsWith('--interval='))?.split('=')[1]) || 5; // minutes
+const GENERATE_COUNT = parseInt(args.find(a => a.startsWith('--generate='))?.split('=')[1]) || 0;
 const AGENTS_PER_MATCH = 12;
 
 if (!OPENAI_API_KEY) {
@@ -171,6 +177,106 @@ async function loadOrCreateBots() {
   console.log(`💾 Saved ${bots.length} bots to bots/agents.json\n`);
 
   return bots;
+}
+
+// Generate additional agents and add to existing file
+async function generateMoreAgents(count) {
+  console.log(`\n🤖 Generating ${count} additional agents...\n`);
+  
+  // Load existing bots
+  let existingBots = [];
+  if (fs.existsSync(BOTS_FILE)) {
+    existingBots = JSON.parse(fs.readFileSync(BOTS_FILE, 'utf8'));
+    console.log(`   Existing agents: ${existingBots.length}`);
+  }
+  
+  const existingNames = new Set(existingBots.map(b => b.name.toLowerCase()));
+  const newBots = [];
+  
+  for (let i = 0; i < count; i++) {
+    let attempts = 0;
+    while (attempts < 10) {
+      const name = generateName();
+      
+      // Skip if name already exists
+      if (existingNames.has(name.toLowerCase())) {
+        attempts++;
+        continue;
+      }
+      
+      try {
+        const { status, data } = await request('POST', `${API_BASE}/agents/register`, {
+          agent_name: name, ai_model: MODEL
+        });
+        if (data.api_key) {
+          const bot = {
+            id: data.agent_id,
+            name,
+            apiKey: data.api_key,
+            style: STYLES[(existingBots.length + newBots.length) % STYLES.length]
+          };
+          newBots.push(bot);
+          existingNames.add(name.toLowerCase());
+          process.stdout.write(`\r   Created ${newBots.length}/${count} new agents`);
+          break;
+        }
+      } catch (e) {
+        // Ignore errors, retry
+      }
+      attempts++;
+    }
+    await sleep(50);
+  }
+  
+  console.log('\n');
+  
+  // Merge and save
+  const allBots = [...existingBots, ...newBots];
+  fs.mkdirSync(path.dirname(BOTS_FILE), { recursive: true });
+  fs.writeFileSync(BOTS_FILE, JSON.stringify(allBots, null, 2));
+  
+  console.log(`✅ Added ${newBots.length} new agents`);
+  console.log(`💾 Total agents: ${allBots.length} (saved to bots/agents.json)\n`);
+  
+  return allBots;
+}
+
+// Continuous loop mode - start 1 game every N minutes
+async function runLoopMode(allBots) {
+  console.log(`\n🔄 CONTINUOUS MODE: Starting 1 game every ${LOOP_INTERVAL} minutes`);
+  console.log(`   Press Ctrl+C to stop\n`);
+  
+  let matchNum = 0;
+  
+  while (true) {
+    matchNum++;
+    console.log(`\n${'─'.repeat(50)}`);
+    console.log(`🎮 MATCH #${matchNum} - ${new Date().toLocaleTimeString()}`);
+    console.log(`${'─'.repeat(50)}`);
+    
+    // Run a single match (don't await - let it run in background)
+    runMatch(matchNum, allBots).then(result => {
+      if (result.completed) {
+        stats.completed++;
+        stats.totalRounds += result.rounds;
+        if (result.winner === 'innocents') stats.innocentWins++;
+        else if (result.winner === 'traitors') stats.traitorWins++;
+        else stats.abandoned++;
+      } else {
+        stats.abandoned++;
+      }
+      stats.totalMatches++;
+      
+      // Print running stats
+      console.log(`\n📊 Running Stats: ${stats.completed} completed, ${stats.innocentWins} innocent wins, ${stats.traitorWins} traitor wins`);
+    }).catch(err => {
+      console.error(`[M${matchNum}] Error:`, err.message);
+    });
+    
+    // Wait for interval before starting next game
+    console.log(`\n⏰ Next game in ${LOOP_INTERVAL} minutes...`);
+    await sleep(LOOP_INTERVAL * 60 * 1000);
+  }
 }
 
 // Bot class
@@ -454,8 +560,21 @@ async function runMatch(matchNum, allBots) {
 
 // Main
 async function main() {
+  // Handle --generate mode (just create agents and exit)
+  if (GENERATE_COUNT > 0) {
+    console.log('\n' + '═'.repeat(60));
+    console.log(`   🤖 GENERATE ${GENERATE_COUNT} NEW AGENTS`);
+    console.log('═'.repeat(60));
+    
+    await generateMoreAgents(GENERATE_COUNT);
+    await pool.end();
+    return;
+  }
+
+  const modeLabel = LOOP_MODE ? `CONTINUOUS (1 game / ${LOOP_INTERVAL} min)` : `${TOTAL_MATCHES} PARALLEL MATCHES`;
+  
   console.log('\n' + '═'.repeat(60));
-  console.log(`   🎮 AMONGCLAWDS - ${TOTAL_MATCHES} PARALLEL MATCHES`);
+  console.log(`   🎮 AMONGCLAWDS - ${modeLabel}`);
   console.log('═'.repeat(60));
 
   // Check server
@@ -481,6 +600,20 @@ async function main() {
   // Load or create bots
   const allBots = await loadOrCreateBots();
 
+  if (allBots.length < AGENTS_PER_MATCH) {
+    console.log(`❌ Need at least ${AGENTS_PER_MATCH} agents. Have: ${allBots.length}`);
+    console.log(`   Run: node run-matches.js --generate=${AGENTS_PER_MATCH - allBots.length}`);
+    await pool.end();
+    return;
+  }
+
+  // LOOP MODE - continuous games
+  if (LOOP_MODE) {
+    await runLoopMode(allBots);
+    return; // Never reached (loop runs forever)
+  }
+
+  // BATCH MODE - run N matches in parallel
   if (allBots.length < AGENTS_PER_MATCH * TOTAL_MATCHES) {
     console.log(`⚠️  Warning: ${allBots.length} bots for ${TOTAL_MATCHES} matches (${AGENTS_PER_MATCH * TOTAL_MATCHES} ideal)`);
   }
