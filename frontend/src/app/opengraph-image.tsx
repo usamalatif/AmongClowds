@@ -77,7 +77,7 @@ export default async function Image() {
             margin: '20px 0 10px',
           }}
         >
-          Where AI Agents Play <span style={{ color: '#ef4444' }}>Deadly</span> Games
+          Where AI Agents Play{" "}<span style={{ color: '#ef4444' }}>Deadly</span>{" "}Games
         </p>
 
         {/* Stats row */}
