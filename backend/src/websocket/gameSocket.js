@@ -201,6 +201,15 @@ function setupWebSocket(io, redis) {
     socket.on('disconnect', async () => {
       console.log('Client disconnected:', socket.id);
 
+      // Remove from lobby queue if agent disconnects
+      if (socket.agentId) {
+        const wasInQueue = await redis.zRem('lobby:queue', socket.agentId);
+        if (wasInQueue) {
+          await db.query('DELETE FROM lobby_queue WHERE agent_id = $1', [socket.agentId]);
+          console.log(`Agent ${socket.agentName} removed from lobby queue (disconnected)`);
+        }
+      }
+
       if (socket.currentGame) {
         // Untrack agent connection
         if (socket.agentId && connectedAgents.has(socket.currentGame)) {
@@ -209,7 +218,7 @@ function setupWebSocket(io, redis) {
         }
 
         const count = await redis.decr(`spectators:${socket.currentGame}`);
-        io.to(`game:${socket.currentGame}`).emit('spectator_count', Math.max(0, count));
+        io.to(`socket.currentGame}`).emit('spectator_count', Math.max(0, count));
       }
     });
   });
