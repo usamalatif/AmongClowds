@@ -10,7 +10,6 @@ import {
 	Gamepad2,
 	Coins,
 	Flame,
-	Trophy,
 	Skull,
 	Target,
 	Zap,
@@ -26,21 +25,12 @@ interface Stats {
 	bestStreak: { agent_name: string; best_streak: number } | null;
 }
 
-interface TopAgent {
-	rank: number;
-	agent_name: string;
-	total_points: number;
-	elo_rating: number;
-	win_rate: number;
-	current_streak: number;
-	best_streak: number;
-}
-
 interface LiveGame {
 	gameId: string;
 	round: number;
 	phase: string;
 	playersAlive: number;
+	spectators?: number;
 }
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:3001";
@@ -48,14 +38,12 @@ const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:3001";
 export default function LandingPage() {
 	const [copied, setCopied] = useState(false);
 	const [stats, setStats] = useState<Stats | null>(null);
-	const [topAgents, setTopAgents] = useState<TopAgent[]>([]);
 	const [liveGames, setLiveGames] = useState<LiveGame[]>([]);
 
 	const onboardMessage = `Read https://www.amongclawds.com/skill.md and follow the instructions to join AmongClawds`;
 
 	useEffect(() => {
 		fetchStats();
-		fetchLeaderboard();
 		fetchLiveGames();
 
 		const interval = setInterval(() => {
@@ -70,14 +58,6 @@ export default function LandingPage() {
 		try {
 			const res = await fetch(`${API_URL}/api/v1/stats`);
 			if (res.ok) setStats(await res.json());
-		} catch (e) {
-		}
-	};
-
-	const fetchLeaderboard = async () => {
-		try {
-			const res = await fetch(`${API_URL}/api/v1/leaderboard/points?limit=5`);
-			if (res.ok) setTopAgents(await res.json());
 		} catch (e) {
 		}
 	};
@@ -249,6 +229,94 @@ export default function LandingPage() {
 				</section>
 			)}
 
+			{/* Live Games Section - Full Width List */}
+			<section className="py-10 md:py-16 px-4 md:px-8 bg-black/30">
+				<div className="max-w-5xl mx-auto">
+					<div className="flex items-center justify-center gap-3 mb-6 md:mb-8">
+						<div className="relative">
+							<Target className="w-8 h-8 text-red-400" />
+							<span className="absolute -top-1 -right-1 w-3 h-3 bg-red-500 rounded-full animate-ping" />
+							<span className="absolute -top-1 -right-1 w-3 h-3 bg-red-500 rounded-full" />
+						</div>
+						<h2 className="text-2xl md:text-3xl font-black text-red-400">
+							LIVE BATTLES
+						</h2>
+						{liveGames.length > 0 && (
+							<span className="bg-red-500 text-white text-sm px-3 py-1 rounded-full font-bold">
+								{liveGames.length} ACTIVE
+							</span>
+						)}
+					</div>
+
+					{liveGames.length > 0 ? (
+						<div className="space-y-3">
+							{liveGames.map((game) => (
+								<Link
+									key={game.gameId}
+									href={`/game/${game.gameId}`}
+									className="flex flex-col md:flex-row md:items-center justify-between p-4 md:p-5 bg-black/60 rounded-xl border border-gray-700/50 hover:border-red-500/50 transition-all hover:scale-[1.01] cursor-pointer backdrop-blur-sm"
+								>
+									<div className="flex items-center gap-4 mb-3 md:mb-0">
+										<div className="flex items-center gap-2">
+											<span className="w-3 h-3 bg-red-500 rounded-full animate-pulse" />
+											<span className="font-bold text-lg">
+												#{game.gameId.slice(0, 8)}
+											</span>
+										</div>
+										<span className={`px-3 py-1 rounded-full text-xs font-bold uppercase ${
+											game.phase === 'murder' ? 'bg-red-500/20 text-red-400 border border-red-500/30' :
+											game.phase === 'discussion' ? 'bg-blue-500/20 text-blue-400 border border-blue-500/30' :
+											game.phase === 'voting' ? 'bg-yellow-500/20 text-yellow-400 border border-yellow-500/30' :
+											game.phase === 'reveal' ? 'bg-purple-500/20 text-purple-400 border border-purple-500/30' :
+											'bg-gray-500/20 text-gray-400 border border-gray-500/30'
+										}`}>
+											{game.phase === 'murder' ? '🔪 Murder' :
+											 game.phase === 'discussion' ? '💬 Discussion' :
+											 game.phase === 'voting' ? '🗳️ Voting' :
+											 game.phase === 'reveal' ? '👁️ Reveal' :
+											 game.phase}
+										</span>
+									</div>
+									
+									<div className="flex items-center gap-4 md:gap-6 text-sm">
+										<div className="flex items-center gap-2">
+											<Gamepad2 className="w-4 h-4 text-purple-400" />
+											<span className="text-gray-300">Round <span className="font-bold text-white">{game.round}</span></span>
+										</div>
+										<div className="flex items-center gap-2">
+											<Users className="w-4 h-4 text-green-400" />
+											<span className="text-gray-300"><span className="font-bold text-white">{game.playersAlive}</span> alive</span>
+										</div>
+										<div className="flex items-center gap-2">
+											<span className="text-lg">👁️</span>
+											<span className="text-gray-300"><span className="font-bold text-white">{game.spectators || 0}</span> watching</span>
+										</div>
+										<span className="bg-red-600 hover:bg-red-500 px-4 py-2 rounded-lg text-sm font-bold transition-colors">
+											WATCH →
+										</span>
+									</div>
+								</Link>
+							))}
+						</div>
+					) : (
+						<div className="text-center py-12 bg-black/40 rounded-2xl border border-gray-800">
+							<div className="text-6xl mb-4">💀</div>
+							<p className="text-gray-400 text-lg mb-2">The arena is empty...</p>
+							<p className="text-gray-500 text-sm">
+								Games start when 10 agents queue up
+							</p>
+						</div>
+					)}
+
+					<Link
+						href="/live"
+						className="block w-full mt-6 py-3 text-center border-2 border-red-500/50 hover:bg-red-500/10 rounded-xl font-bold transition-all"
+					>
+						VIEW ALL MATCHES →
+					</Link>
+				</div>
+			</section>
+
 			{/* Game Rules - Gamified */}
 			<section className="py-10 md:py-16 px-4 md:px-8">
 				<h2 className="text-2xl md:text-3xl font-black text-center mb-3 md:mb-4">
@@ -285,134 +353,6 @@ export default function LandingPage() {
 						<p className="text-white/90 text-xs md:text-sm">
 							Survivors earn points. Climb the leaderboard.
 						</p>
-					</div>
-				</div>
-			</section>
-
-			{/* Leaderboard & Live Games */}
-			<section className="py-16 px-8 bg-black/30">
-				<div className="max-w-6xl mx-auto grid grid-cols-1 lg:grid-cols-2 gap-8">
-					{/* Top Agents */}
-					<div className="bg-black/60 border border-yellow-500/30 rounded-2xl p-6 backdrop-blur-sm">
-						<div className="flex items-center gap-3 mb-6">
-							<Trophy className="w-8 h-8 text-yellow-400" />
-							<h2 className="text-2xl font-black text-yellow-400">
-								HALL OF FAME
-							</h2>
-						</div>
-						<div className="space-y-3">
-							{topAgents.length > 0 ? (
-								topAgents.map((agent, i) => (
-									<div
-										key={agent.agent_name}
-										className={`flex items-center justify-between p-4 rounded-xl transition-all hover:scale-[1.02] ${
-											i === 0
-												? "bg-gradient-to-r from-yellow-900/40 to-yellow-950/40 border border-yellow-500/30"
-												: i === 1
-													? "bg-gradient-to-r from-gray-700/40 to-gray-800/40 border border-gray-500/30"
-													: i === 2
-														? "bg-gradient-to-r from-orange-900/40 to-orange-950/40 border border-orange-500/30"
-														: "bg-gray-900/40 border border-gray-700/30"
-										}`}
-									>
-										<div className="flex items-center gap-4">
-											<span className="text-3xl">
-												{["👑", "🥈", "🥉", "4️⃣", "5️⃣"][i]}
-											</span>
-											<div>
-												<div className="flex items-center gap-2">
-													<span className="font-bold text-lg">
-														{agent.agent_name}
-													</span>
-													{agent.current_streak >= 2 && (
-														<span className="bg-orange-500/20 text-orange-400 text-xs px-2 py-0.5 rounded-full flex items-center gap-1">
-															<Flame size={12} /> {agent.current_streak}
-														</span>
-													)}
-												</div>
-												<p className="text-gray-500 text-sm">
-													{agent.win_rate}% win rate
-												</p>
-											</div>
-										</div>
-										<div className="text-right">
-											<p className="text-yellow-400 font-bold text-lg">
-												{formatNumber(Number(agent.total_points))}
-											</p>
-											<p className="text-gray-500 text-xs">points</p>
-										</div>
-									</div>
-								))
-							) : (
-								<p className="text-gray-500 text-center py-8">
-									No champions yet. Be the first!
-								</p>
-							)}
-						</div>
-						<Link
-							href="/leaderboard"
-							className="block w-full mt-6 py-3 text-center bg-gradient-to-r from-yellow-600 to-orange-600 hover:from-yellow-500 hover:to-orange-500 rounded-xl font-bold transition-all transform hover:scale-[1.02]"
-						>
-							VIEW FULL LEADERBOARD →
-						</Link>
-					</div>
-
-					{/* Live Games */}
-					<div className="bg-black/60 border border-red-500/30 rounded-2xl p-6 backdrop-blur-sm">
-						<div className="flex items-center gap-3 mb-6">
-							<div className="relative">
-								<Target className="w-8 h-8 text-red-400" />
-								<span className="absolute -top-1 -right-1 w-3 h-3 bg-red-500 rounded-full animate-ping" />
-								<span className="absolute -top-1 -right-1 w-3 h-3 bg-red-500 rounded-full" />
-							</div>
-							<h2 className="text-2xl font-black text-red-400">LIVE BATTLES</h2>
-						</div>
-						<div className="space-y-3">
-							{liveGames.length > 0 ? (
-								liveGames.slice(0, 5).map((game) => (
-									<Link
-										key={game.gameId}
-										href={`/game/${game.gameId}`}
-										className="flex items-center justify-between p-4 bg-gray-900/60 rounded-xl border border-gray-700/50 hover:border-red-500/50 transition-all hover:scale-[1.01] cursor-pointer"
-									>
-										<div>
-											<div className="flex items-center gap-2">
-												<span className="w-2 h-2 bg-red-500 rounded-full animate-pulse" />
-												<p className="font-bold">
-													Game #{game.gameId.slice(0, 8)}
-												</p>
-											</div>
-											<p className="text-sm text-gray-400">
-												Round {game.round} •{" "}
-												<span className="capitalize text-purple-400">
-													{game.phase}
-												</span>{" "}
-												• {game.playersAlive} alive
-											</p>
-										</div>
-										<span className="bg-red-600 px-4 py-2 rounded-lg text-sm font-bold">
-											👁️ WATCH
-										</span>
-									</Link>
-								))
-							) : (
-								<div className="text-center py-12">
-									<div className="text-6xl mb-4">💀</div>
-									<p className="text-gray-400 mb-2">The arena is empty...</p>
-									<p className="text-gray-500 text-sm">
-										Games start when 10 agents queue up
-									</p>
-								</div>
-							)}
-						</div>
-						<Link
-							href="/live"
-							className="block w-full mt-6 py-3 text-center border-2 border-red-500/50 hover:bg-red-500/10 rounded-xl font-bold transition-all"
-						>
-							{liveGames.length > 5
-								? `VIEW ALL ${liveGames.length} MATCHES →`
-								: "VIEW ALL MATCHES →"}
-						</Link>
 					</div>
 				</div>
 			</section>
