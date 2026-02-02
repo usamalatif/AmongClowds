@@ -553,6 +553,14 @@ class GameEngine extends EventEmitter {
       }
     }
 
+    // Score spectator predictions
+    if (this.state.winner !== 'abandoned') {
+      await this.scorePredictions();
+    }
+
+    // Check and unlock achievements for all agents
+    await this.checkAchievements();
+
     // Remove from active games
     await redis.lRem('games:active', 0, this.gameId);
     
@@ -595,6 +603,135 @@ class GameEngine extends EventEmitter {
       `UPDATE games SET current_round = $1, current_phase = $2 WHERE id = $3`,
       [this.state.currentRound, this.state.currentPhase, this.gameId]
     );
+  }
+
+  // Score spectator predictions after game ends
+  async scorePredictions() {
+    try {
+      // Get actual traitor IDs
+      const traitorIds = this.state.agents
+        .filter(a => a.role === 'traitor')
+        .map(a => a.agent_id);
+
+      // Get all predictions for this game
+      const predictions = await db.query(
+        `SELECT id, spectator_id, predicted_traitor_ids FROM predictions WHERE game_id = $1`,
+        [this.gameId]
+      );
+
+      for (const pred of predictions.rows) {
+        const predictedIds = pred.predicted_traitor_ids || [];
+        
+        // Count correct predictions (how many of the predicted IDs are actual traitors)
+        const correctCount = predictedIds.filter(id => traitorIds.includes(id)).length;
+        
+        // Calculate points: 50 per correct traitor, bonus 100 for getting both
+        let pointsEarned = correctCount * 50;
+        const isFullyCorrect = correctCount === 2;
+        if (isFullyCorrect) {
+          pointsEarned += 100; // Bonus for getting both
+        }
+
+        await db.query(
+          `UPDATE predictions 
+           SET is_correct = $1, points_earned = $2 
+           WHERE id = $3`,
+          [isFullyCorrect, pointsEarned, pred.id]
+        );
+      }
+
+      console.log(`Game ${this.gameId}: Scored ${predictions.rows.length} predictions`);
+    } catch (error) {
+      console.error('Error scoring predictions:', error);
+    }
+  }
+
+  // Check and unlock achievements for all agents after game
+  async checkAchievements() {
+    try {
+      // Get all achievement definitions
+      const achievementsResult = await db.query('SELECT * FROM achievements');
+      const achievements = achievementsResult.rows;
+
+      for (const agent of this.state.agents) {
+        // Get agent's current stats
+        const statsResult = await db.query(
+          `SELECT total_games, games_won, best_streak, traitor_wins, innocent_wins, elo_rating
+           FROM agents WHERE id = $1`,
+          [agent.agent_id]
+        );
+
+        if (statsResult.rows.length === 0) continue;
+        const stats = statsResult.rows[0];
+
+        // Get agent's already unlocked achievements
+        const unlockedResult = await db.query(
+          'SELECT achievement_id FROM agent_achievements WHERE agent_id = $1',
+          [agent.agent_id]
+        );
+        const unlockedIds = new Set(unlockedResult.rows.map(r => r.achievement_id));
+
+        // Check each achievement
+        const newUnlocks = [];
+        for (const ach of achievements) {
+          if (unlockedIds.has(ach.id)) continue; // Already unlocked
+
+          let value = 0;
+          switch (ach.requirement_type) {
+            case 'games_played':
+              value = stats.total_games;
+              break;
+            case 'games_won':
+              value = stats.games_won;
+              break;
+            case 'best_streak':
+              value = stats.best_streak;
+              break;
+            case 'traitor_wins':
+              value = stats.traitor_wins;
+              break;
+            case 'innocent_wins':
+              value = stats.innocent_wins;
+              break;
+            case 'elo_rating':
+              value = stats.elo_rating;
+              break;
+          }
+
+          if (value >= ach.requirement_value) {
+            newUnlocks.push(ach);
+          }
+        }
+
+        // Insert new unlocks
+        for (const ach of newUnlocks) {
+          await db.query(
+            `INSERT INTO agent_achievements (agent_id, achievement_id, game_id)
+             VALUES ($1, $2, $3)
+             ON CONFLICT (agent_id, achievement_id) DO NOTHING`,
+            [agent.agent_id, ach.id, this.gameId]
+          );
+          console.log(`🏆 ${agent.name} unlocked: ${ach.icon} ${ach.name}`);
+        }
+
+        // Broadcast achievement unlocks to the game
+        if (newUnlocks.length > 0) {
+          broadcastToGame(this.io, this.gameId, 'achievements_unlocked', {
+            agentId: agent.agent_id,
+            agentName: agent.name,
+            achievements: newUnlocks.map(a => ({
+              id: a.id,
+              name: a.name,
+              icon: a.icon,
+              description: a.description,
+              rarity: a.rarity
+            }))
+          });
+        }
+      }
+    } catch (error) {
+      console.error('Error checking achievements:', error);
+    }
   }
 }
 

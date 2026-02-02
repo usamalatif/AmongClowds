@@ -86,6 +86,31 @@ export default function GamePage() {
   const [showReactions, setShowReactions] = useState<string | null>(null);
   const [mobileTab, setMobileTab] = useState<string>('chat');
   const [allVotesIn, setAllVotesIn] = useState(false);
+  
+  // Predictions state
+  const [selectedTraitors, setSelectedTraitors] = useState<string[]>([]);
+  const [predictionSubmitted, setPredictionSubmitted] = useState(false);
+  const [predictionResult, setPredictionResult] = useState<{ isCorrect: boolean; pointsEarned: number } | null>(null);
+  const [spectatorId, setSpectatorId] = useState<string>('');
+  const [showPredictionPanel, setShowPredictionPanel] = useState(true);
+  const [newAchievements, setNewAchievements] = useState<Array<{ id: string; name: string; icon: string; description: string; rarity: string; agentName: string }>>([]);
+
+  // Initialize spectator ID from localStorage
+  useEffect(() => {
+    let id = localStorage.getItem('spectatorId');
+    if (!id) {
+      id = `spectator_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+      localStorage.setItem('spectatorId', id);
+    }
+    setSpectatorId(id);
+    
+    // Check if we already submitted a prediction for this game
+    const submitted = localStorage.getItem(`prediction_${gameId}`);
+    if (submitted) {
+      setPredictionSubmitted(true);
+      setSelectedTraitors(JSON.parse(submitted));
+    }
+  }, [gameId]);
 
   useEffect(() => {
     fetchGame();
@@ -230,6 +255,17 @@ export default function GamePage() {
       });
     });
 
+    newSocket.on('achievements_unlocked', (data: { agentId: string; agentName: string; achievements: Array<{ id: string; name: string; icon: string; description: string; rarity: string }> }) => {
+      // Show achievement notifications
+      const achWithAgent = data.achievements.map(a => ({ ...a, agentName: data.agentName }));
+      setNewAchievements(prev => [...prev, ...achWithAgent]);
+      
+      // Auto-clear after 5 seconds
+      setTimeout(() => {
+        setNewAchievements(prev => prev.filter(a => !achWithAgent.some(na => na.id === a.id && na.agentName === a.agentName)));
+      }, 5000);
+    });
+
     newSocket.on('game_ended', (data) => {
       soundManager.victory();
       setGame(prev => prev ? { 
@@ -238,6 +274,18 @@ export default function GamePage() {
         winner: data.winner,
         agents: data.agents || prev.agents
       } : null);
+      
+      // Fetch prediction result if we submitted one
+      if (predictionSubmitted && spectatorId) {
+        fetch(`${API_URL}/api/v1/games/${gameId}/predictions?spectatorId=${spectatorId}`)
+          .then(res => res.json())
+          .then(result => {
+            if (result) {
+              setPredictionResult({ isCorrect: result.is_correct, pointsEarned: result.points_earned });
+            }
+          })
+          .catch(() => {});
+      }
       
       // 🎊 Victory effects based on winner
       if (data.winner === 'innocents') {
@@ -351,6 +399,43 @@ export default function GamePage() {
     socket?.emit('vote_suspect', { gameId, agentId });
   };
 
+  const toggleTraitorPrediction = (agentId: string) => {
+    if (predictionSubmitted) return;
+    
+    setSelectedTraitors(prev => {
+      if (prev.includes(agentId)) {
+        return prev.filter(id => id !== agentId);
+      }
+      if (prev.length >= 2) {
+        // Replace the first one
+        return [prev[1], agentId];
+      }
+      return [...prev, agentId];
+    });
+  };
+
+  const submitPrediction = async () => {
+    if (selectedTraitors.length !== 2 || !spectatorId) return;
+    
+    try {
+      const res = await fetch(`${API_URL}/api/v1/games/${gameId}/predictions`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          spectatorId,
+          predictedTraitorIds: selectedTraitors
+        })
+      });
+      
+      if (res.ok) {
+        setPredictionSubmitted(true);
+        localStorage.setItem(`prediction_${gameId}`, JSON.stringify(selectedTraitors));
+      }
+    } catch (e) {
+      console.error('Failed to submit prediction:', e);
+    }
+  };
+
   const formatTime = (seconds: number) => {
     const mins = Math.floor(seconds / 60);
     const secs = seconds % 60;
@@ -431,6 +516,32 @@ export default function GamePage() {
           game.currentPhase === 'voting' ? 'bg-amber-600' : 'bg-pink-600'
         }`} />
       </div>
+
+      {/* Achievement Notifications */}
+      {newAchievements.length > 0 && (
+        <div className="fixed top-20 right-4 z-50 space-y-2">
+          {newAchievements.map((ach, i) => (
+            <div 
+              key={`${ach.id}-${ach.agentName}-${i}`}
+              className={`bg-black/90 backdrop-blur-sm border-2 rounded-xl p-4 shadow-lg animate-slide-in-right ${
+                ach.rarity === 'legendary' ? 'border-yellow-500/50 shadow-yellow-500/20' :
+                ach.rarity === 'epic' ? 'border-purple-500/50 shadow-purple-500/20' :
+                ach.rarity === 'rare' ? 'border-blue-500/50 shadow-blue-500/20' :
+                'border-gray-500/50'
+              }`}
+            >
+              <div className="flex items-center gap-3">
+                <span className="text-3xl">{ach.icon}</span>
+                <div>
+                  <p className="text-xs text-gray-400">{ach.agentName} unlocked</p>
+                  <p className="font-bold text-white">{ach.name}</p>
+                  <p className="text-xs text-gray-500">{ach.description}</p>
+                </div>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
 
       {/* Top Header Bar */}
       <header className="relative bg-black/80 backdrop-blur-sm border-b-2 border-purple-500/30">
@@ -690,6 +801,16 @@ export default function GamePage() {
                 <p className="text-3xl font-black text-yellow-400">?</p>
                 <p className="text-xs text-yellow-400/70 uppercase">Traitors</p>
               </div>
+            </div>
+          </div>
+
+          {/* Prize Pool */}
+          <div className="bg-gradient-to-br from-yellow-900/30 to-black/60 backdrop-blur-sm border-2 border-yellow-500/40 rounded-2xl p-5">
+            <div className="text-center">
+              <Trophy className="w-10 h-10 text-yellow-400 mx-auto mb-2" />
+              <p className="text-xs text-yellow-400/70 uppercase tracking-wider mb-1">Prize Pool</p>
+              <p className="text-4xl font-black text-yellow-400">{(game.prizePool || 10000).toLocaleString()}</p>
+              <p className="text-xs text-gray-500 mt-1">points at stake</p>
             </div>
           </div>
 
@@ -958,15 +1079,101 @@ export default function GamePage() {
             </div>
           )}
 
-          {/* Prize Pool */}
-          <div className="bg-gradient-to-br from-yellow-900/30 to-black/60 backdrop-blur-sm border-2 border-yellow-500/40 rounded-2xl p-5">
-            <div className="text-center">
-              <Trophy className="w-10 h-10 text-yellow-400 mx-auto mb-2" />
-              <p className="text-xs text-yellow-400/70 uppercase tracking-wider mb-1">Prize Pool</p>
-              <p className="text-4xl font-black text-yellow-400">{(game.prizePool || 10000).toLocaleString()}</p>
-              <p className="text-xs text-gray-500 mt-1">points at stake</p>
+          {/* 🎯 Traitor Prediction Panel */}
+          {game.status !== 'finished' && showPredictionPanel && (
+            <div className="bg-black/60 backdrop-blur-sm border-2 border-yellow-500/30 rounded-2xl p-4">
+              <div className="flex items-center justify-between mb-3">
+                <h3 className="text-sm font-bold flex items-center gap-2 text-yellow-400">
+                  🎯 PREDICT TRAITORS
+                </h3>
+                <button 
+                  onClick={() => setShowPredictionPanel(false)}
+                  className="text-gray-500 hover:text-white text-xs"
+                >
+                  ✕
+                </button>
+              </div>
+              
+              {predictionSubmitted ? (
+                <div className="text-center py-4">
+                  <div className="text-3xl mb-2">🔮</div>
+                  <p className="text-yellow-400 font-bold">Prediction Locked!</p>
+                  <p className="text-xs text-gray-400 mt-1">
+                    You picked: {game.agents.filter(a => selectedTraitors.includes(a.id)).map(a => a.name).join(' & ')}
+                  </p>
+                  <p className="text-xs text-gray-500 mt-2">Results revealed when game ends</p>
+                </div>
+              ) : (
+                <>
+                  <p className="text-xs text-gray-400 mb-3">
+                    Select 2 agents you think are traitors. Get points if you&apos;re right!
+                  </p>
+                  <div className="space-y-2 max-h-[200px] overflow-y-auto">
+                    {game.agents.filter(a => a.status === 'alive').map(agent => (
+                      <button
+                        key={agent.id}
+                        onClick={() => toggleTraitorPrediction(agent.id)}
+                        className={`w-full flex items-center justify-between p-2.5 rounded-xl border transition-all text-left ${
+                          selectedTraitors.includes(agent.id)
+                            ? 'bg-yellow-900/40 border-yellow-500/50 text-yellow-300'
+                            : 'bg-gray-900/60 border-transparent hover:bg-yellow-900/20 hover:border-yellow-500/30'
+                        }`}
+                      >
+                        <span className="text-sm font-medium">{agent.name}</span>
+                        {selectedTraitors.includes(agent.id) && (
+                          <span className="text-yellow-400 text-lg">🔴</span>
+                        )}
+                      </button>
+                    ))}
+                  </div>
+                  <div className="mt-3 pt-3 border-t border-yellow-500/20">
+                    <p className="text-xs text-gray-500 mb-2">
+                      Selected: {selectedTraitors.length}/2
+                    </p>
+                    <button
+                      onClick={submitPrediction}
+                      disabled={selectedTraitors.length !== 2}
+                      className={`w-full py-2 rounded-xl font-bold text-sm transition-all ${
+                        selectedTraitors.length === 2
+                          ? 'bg-yellow-600 hover:bg-yellow-500 text-black'
+                          : 'bg-gray-800 text-gray-500 cursor-not-allowed'
+                      }`}
+                    >
+                      {selectedTraitors.length === 2 ? '🎯 LOCK IN PREDICTION' : 'Select 2 Traitors'}
+                    </button>
+                  </div>
+                </>
+              )}
             </div>
-          </div>
+          )}
+
+          {/* Prediction Results (when game ends) */}
+          {game.status === 'finished' && predictionSubmitted && (
+            <div className={`bg-black/60 backdrop-blur-sm border-2 rounded-2xl p-4 ${
+              predictionResult?.isCorrect ? 'border-green-500/50' : 'border-red-500/30'
+            }`}>
+              <h3 className="text-sm font-bold mb-3 flex items-center gap-2">
+                🎯 YOUR PREDICTION
+              </h3>
+              <div className="text-center py-2">
+                {predictionResult?.isCorrect ? (
+                  <>
+                    <div className="text-4xl mb-2">🎉</div>
+                    <p className="text-green-400 font-bold text-lg">CORRECT!</p>
+                    <p className="text-yellow-400 font-bold">+{predictionResult.pointsEarned} points</p>
+                  </>
+                ) : (
+                  <>
+                    <div className="text-4xl mb-2">😅</div>
+                    <p className="text-red-400 font-bold">Not quite!</p>
+                    <p className="text-xs text-gray-400 mt-1">
+                      You guessed {predictionResult?.pointsEarned ? `${predictionResult.pointsEarned / 50} traitor correctly` : '0 traitors'}
+                    </p>
+                  </>
+                )}
+              </div>
+            </div>
+          )}
 
           {/* Dead Summary */}
           {deadAgents.length > 0 && (

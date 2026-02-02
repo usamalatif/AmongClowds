@@ -110,6 +110,92 @@ const migrations = [
       ALTER TABLE agents ADD COLUMN IF NOT EXISTS current_streak INT DEFAULT 0;
       ALTER TABLE agents ADD COLUMN IF NOT EXISTS best_streak INT DEFAULT 0;
     `
+  },
+  {
+    name: 'add_spectator_predictions',
+    up: `
+      -- Spectator predictions table
+      CREATE TABLE IF NOT EXISTS predictions (
+          id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+          game_id UUID REFERENCES games(id) ON DELETE CASCADE,
+          spectator_id VARCHAR(100) NOT NULL,
+          predicted_traitor_ids UUID[] NOT NULL,
+          points_earned INT DEFAULT 0,
+          is_correct BOOLEAN,
+          created_at TIMESTAMP DEFAULT NOW()
+      );
+
+      -- Each spectator can only predict once per game
+      CREATE UNIQUE INDEX IF NOT EXISTS idx_predictions_unique ON predictions(game_id, spectator_id);
+      CREATE INDEX IF NOT EXISTS idx_predictions_game ON predictions(game_id);
+    `
+  },
+  {
+    name: 'add_achievements',
+    up: `
+      -- Achievement definitions
+      CREATE TABLE IF NOT EXISTS achievements (
+          id VARCHAR(50) PRIMARY KEY,
+          name VARCHAR(100) NOT NULL,
+          description TEXT NOT NULL,
+          icon VARCHAR(10) NOT NULL,
+          category VARCHAR(30) NOT NULL,
+          requirement_type VARCHAR(30) NOT NULL,
+          requirement_value INT NOT NULL,
+          points INT DEFAULT 0,
+          rarity VARCHAR(20) DEFAULT 'common',
+          created_at TIMESTAMP DEFAULT NOW()
+      );
+
+      -- Agent achievements (unlocked)
+      CREATE TABLE IF NOT EXISTS agent_achievements (
+          id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+          agent_id UUID REFERENCES agents(id) ON DELETE CASCADE,
+          achievement_id VARCHAR(50) REFERENCES achievements(id),
+          unlocked_at TIMESTAMP DEFAULT NOW(),
+          game_id UUID REFERENCES games(id),
+          UNIQUE(agent_id, achievement_id)
+      );
+
+      CREATE INDEX IF NOT EXISTS idx_agent_achievements ON agent_achievements(agent_id);
+
+      -- Seed default achievements
+      INSERT INTO achievements (id, name, description, icon, category, requirement_type, requirement_value, points, rarity) VALUES
+        -- Games played
+        ('first_blood', 'First Blood', 'Play your first game', '🎮', 'games', 'games_played', 1, 10, 'common'),
+        ('veteran', 'Veteran', 'Play 10 games', '⭐', 'games', 'games_played', 10, 25, 'common'),
+        ('grizzled', 'Grizzled', 'Play 50 games', '🎖️', 'games', 'games_played', 50, 100, 'rare'),
+        ('legend', 'Living Legend', 'Play 100 games', '👑', 'games', 'games_played', 100, 250, 'epic'),
+
+        -- Wins
+        ('first_win', 'Winner Winner', 'Win your first game', '🏆', 'wins', 'games_won', 1, 15, 'common'),
+        ('champion', 'Champion', 'Win 10 games', '🥇', 'wins', 'games_won', 10, 50, 'uncommon'),
+        ('dominator', 'Dominator', 'Win 25 games', '💪', 'wins', 'games_won', 25, 150, 'rare'),
+        ('unstoppable', 'Unstoppable', 'Win 50 games', '🔥', 'wins', 'games_won', 50, 300, 'epic'),
+
+        -- Streaks
+        ('hot_streak', 'Hot Streak', 'Win 3 games in a row', '🔥', 'streaks', 'best_streak', 3, 30, 'uncommon'),
+        ('on_fire', 'On Fire', 'Win 5 games in a row', '🌟', 'streaks', 'best_streak', 5, 75, 'rare'),
+        ('blazing', 'Blazing', 'Win 10 games in a row', '💫', 'streaks', 'best_streak', 10, 200, 'epic'),
+
+        -- Traitor
+        ('first_betrayal', 'First Betrayal', 'Win your first game as traitor', '🗡️', 'traitor', 'traitor_wins', 1, 20, 'common'),
+        ('deceiver', 'Master Deceiver', 'Win 5 games as traitor', '🎭', 'traitor', 'traitor_wins', 5, 60, 'uncommon'),
+        ('mastermind', 'Mastermind', 'Win 15 games as traitor', '🧠', 'traitor', 'traitor_wins', 15, 150, 'rare'),
+        ('puppet_master', 'Puppet Master', 'Win 30 games as traitor', '👿', 'traitor', 'traitor_wins', 30, 350, 'legendary'),
+
+        -- Innocent
+        ('survivor', 'Survivor', 'Win your first game as innocent', '🛡️', 'innocent', 'innocent_wins', 1, 15, 'common'),
+        ('detective', 'Detective', 'Win 5 games as innocent', '🔍', 'innocent', 'innocent_wins', 5, 50, 'uncommon'),
+        ('sherlock', 'Sherlock', 'Win 15 games as innocent', '🕵️', 'innocent', 'innocent_wins', 15, 125, 'rare'),
+        ('guardian', 'Guardian Angel', 'Win 30 games as innocent', '😇', 'innocent', 'innocent_wins', 30, 300, 'legendary'),
+
+        -- ELO
+        ('rising_star', 'Rising Star', 'Reach 1300 ELO', '📈', 'elo', 'elo_rating', 1300, 50, 'uncommon'),
+        ('elite', 'Elite', 'Reach 1500 ELO', '💎', 'elo', 'elo_rating', 1500, 150, 'rare'),
+        ('grandmaster', 'Grandmaster', 'Reach 1800 ELO', '🏅', 'elo', 'elo_rating', 1800, 400, 'legendary')
+      ON CONFLICT (id) DO NOTHING;
+    `
   }
 ];
 

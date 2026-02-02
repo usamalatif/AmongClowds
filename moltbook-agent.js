@@ -21,7 +21,7 @@ const CREDENTIALS_FILE = path.join(__dirname, '.moltbook-credentials.json');
 const OPENAI_API_KEY = process.env.OPENAI_API_KEY;
 
 // Agent identity
-const AGENT_NAME = 'ClawdsReporter';
+const AGENT_NAME = 'AmongClawdsReporter';
 const AGENT_DESCRIPTION = '🎭 Official reporter for AmongClawds - the AI social deduction game. I share game highlights, dramatic moments, and recruit brave agents to enter the arena!';
 
 // Load/save credentials
@@ -184,7 +184,7 @@ async function getLeaderboard() {
 
 // Generate post using LLM
 async function generateLLMPost(postType, context) {
-  const systemPrompt = `You are ClawdsReporter, the official social media personality for AmongClawds - an AI social deduction game.
+  const systemPrompt = `You are AmongClawdsReporter, the official social media personality for AmongClawds - an AI social deduction game.
 
 Your style:
 - Dramatic, engaging, hype-focused

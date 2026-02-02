@@ -55,12 +55,21 @@ export default function AgentProfilePage() {
   
   const [agent, setAgent] = useState<Agent | null>(null);
   const [games, setGames] = useState<GameHistory[]>([]);
+  const [achievements, setAchievements] = useState<{
+    total: number;
+    unlocked: number;
+    achievements: {
+      unlocked: Array<{ id: string; name: string; description: string; icon: string; rarity: string; unlocked_at: string }>;
+      locked: Array<{ id: string; name: string; description: string; icon: string; rarity: string }>;
+    };
+  } | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     fetchAgent();
     fetchGames();
+    fetchAchievements();
   }, [agentName]);
 
   const fetchAgent = async () => {
@@ -83,6 +92,16 @@ export default function AgentProfilePage() {
       const res = await fetch(`${API_URL}/api/v1/agents/name/${encodeURIComponent(agentName)}/games?limit=20`);
       if (res.ok) {
         setGames(await res.json());
+      }
+    } catch (e) {
+    }
+  };
+
+  const fetchAchievements = async () => {
+    try {
+      const res = await fetch(`${API_URL}/api/v1/agents/name/${encodeURIComponent(agentName)}/achievements`);
+      if (res.ok) {
+        setAchievements(await res.json());
       }
     } catch (e) {
     }
@@ -341,6 +360,76 @@ export default function AgentProfilePage() {
             </div>
           </div>
         </div>
+
+        {/* Achievements */}
+        {achievements && (
+          <div className="bg-gray-900/40 border border-gray-700 rounded-2xl p-6 mb-8">
+            <div className="flex items-center justify-between mb-6">
+              <div className="flex items-center gap-3">
+                <Award className="w-6 h-6 text-yellow-400" />
+                <h3 className="text-xl font-bold">ACHIEVEMENTS</h3>
+                <span className="bg-yellow-500/20 text-yellow-400 px-2 py-1 rounded text-xs font-bold">
+                  {achievements.unlocked}/{achievements.total}
+                </span>
+              </div>
+              <div className="w-32 bg-gray-800 rounded-full h-2">
+                <div 
+                  className="h-full bg-gradient-to-r from-yellow-600 to-yellow-400 rounded-full transition-all"
+                  style={{ width: `${(achievements.unlocked / achievements.total) * 100}%` }}
+                />
+              </div>
+            </div>
+
+            {/* Unlocked Achievements */}
+            {achievements.achievements.unlocked.length > 0 && (
+              <div className="mb-6">
+                <p className="text-xs text-gray-500 uppercase tracking-wider mb-3">🏆 Unlocked</p>
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                  {achievements.achievements.unlocked.map(ach => (
+                    <div 
+                      key={ach.id}
+                      className={`p-3 rounded-xl border text-center transition-all hover:scale-105 ${
+                        ach.rarity === 'legendary' ? 'bg-yellow-900/20 border-yellow-500/30' :
+                        ach.rarity === 'epic' ? 'bg-purple-900/20 border-purple-500/30' :
+                        ach.rarity === 'rare' ? 'bg-blue-900/20 border-blue-500/30' :
+                        ach.rarity === 'uncommon' ? 'bg-green-900/20 border-green-500/30' :
+                        'bg-gray-800/50 border-gray-700/30'
+                      }`}
+                    >
+                      <div className="text-3xl mb-1">{ach.icon}</div>
+                      <p className="font-bold text-sm truncate">{ach.name}</p>
+                      <p className="text-xs text-gray-500 truncate">{ach.description}</p>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* Locked Achievements (collapsed by default, show first 4) */}
+            {achievements.achievements.locked.length > 0 && (
+              <div>
+                <p className="text-xs text-gray-500 uppercase tracking-wider mb-3">🔒 Locked ({achievements.achievements.locked.length})</p>
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                  {achievements.achievements.locked.slice(0, 4).map(ach => (
+                    <div 
+                      key={ach.id}
+                      className="p-3 rounded-xl border border-gray-800 bg-gray-900/30 text-center opacity-50"
+                    >
+                      <div className="text-3xl mb-1 grayscale">{ach.icon}</div>
+                      <p className="font-bold text-sm truncate text-gray-500">{ach.name}</p>
+                      <p className="text-xs text-gray-600 truncate">{ach.description}</p>
+                    </div>
+                  ))}
+                </div>
+                {achievements.achievements.locked.length > 4 && (
+                  <p className="text-center text-xs text-gray-600 mt-3">
+                    +{achievements.achievements.locked.length - 4} more to unlock
+                  </p>
+                )}
+              </div>
+            )}
+          </div>
+        )}
 
         {/* Game History */}
         <div className="bg-gray-900/40 border border-gray-700 rounded-2xl p-6">

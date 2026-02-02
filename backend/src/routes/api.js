@@ -973,4 +973,198 @@ router.get('/stats', async (req, res) => {
   }
 });
 
+// ========== SPECTATOR PREDICTIONS ==========
+
+// Submit a prediction for a game
+router.post('/games/:gameId/predictions', async (req, res) => {
+  try {
+    const { gameId } = req.params;
+    const { spectatorId, predictedTraitorIds } = req.body;
+
+    if (!spectatorId || !predictedTraitorIds || !Array.isArray(predictedTraitorIds)) {
+      return res.status(400).json({ error: 'spectatorId and predictedTraitorIds array required' });
+    }
+
+    if (predictedTraitorIds.length !== 2) {
+      return res.status(400).json({ error: 'Must predict exactly 2 traitors' });
+    }
+
+    // Check game exists and is in progress
+    const gameState = await redis.get(`game:${gameId}`);
+    if (!gameState) {
+      return res.status(404).json({ error: 'Game not found or already finished' });
+    }
+
+    const state = JSON.parse(gameState);
+    if (state.status === 'finished') {
+      return res.status(400).json({ error: 'Cannot predict on finished game' });
+    }
+
+    // Verify predicted IDs are valid agents in this game
+    const validIds = state.agents.map(a => a.agent_id);
+    for (const id of predictedTraitorIds) {
+      if (!validIds.includes(id)) {
+        return res.status(400).json({ error: `Invalid agent ID: ${id}` });
+      }
+    }
+
+    // Insert or update prediction
+    await db.query(
+      `INSERT INTO predictions (game_id, spectator_id, predicted_traitor_ids)
+       VALUES ($1, $2, $3)
+       ON CONFLICT (game_id, spectator_id) 
+       DO UPDATE SET predicted_traitor_ids = $3, created_at = NOW()`,
+      [gameId, spectatorId, predictedTraitorIds]
+    );
+
+    res.json({ success: true, message: 'Prediction submitted!' });
+  } catch (error) {
+    console.error('Prediction error:', error);
+    res.status(500).json({ error: 'Failed to submit prediction' });
+  }
+});
+
+// Get predictions for a game
+router.get('/games/:gameId/predictions', async (req, res) => {
+  try {
+    const { gameId } = req.params;
+    const { spectatorId } = req.query;
+
+    // If spectatorId provided, get their prediction
+    if (spectatorId) {
+      const result = await db.query(
+        `SELECT predicted_traitor_ids, is_correct, points_earned, created_at
+         FROM predictions WHERE game_id = $1 AND spectator_id = $2`,
+        [gameId, spectatorId]
+      );
+      return res.json(result.rows[0] || null);
+    }
+
+    // Otherwise get stats
+    const result = await db.query(
+      `SELECT COUNT(*) as total_predictions,
+              COUNT(CASE WHEN is_correct = true THEN 1 END) as correct_predictions
+       FROM predictions WHERE game_id = $1`,
+      [gameId]
+    );
+
+    res.json(result.rows[0]);
+  } catch (error) {
+    console.error('Get predictions error:', error);
+    res.status(500).json({ error: 'Failed to get predictions' });
+  }
+});
+
+// Get prediction results after game ends (called by game engine)
+router.get('/games/:gameId/predictions/results', async (req, res) => {
+  try {
+    const { gameId } = req.params;
+
+    const result = await db.query(
+      `SELECT spectator_id, predicted_traitor_ids, is_correct, points_earned
+       FROM predictions 
+       WHERE game_id = $1 AND is_correct IS NOT NULL
+       ORDER BY points_earned DESC`,
+      [gameId]
+    );
+
+    res.json(result.rows);
+  } catch (error) {
+    console.error('Get prediction results error:', error);
+    res.status(500).json({ error: 'Failed to get prediction results' });
+  }
+});
+
+// ========== ACHIEVEMENTS ==========
+
+// Get all achievements
+router.get('/achievements', async (req, res) => {
+  try {
+    const result = await db.query(
+      `SELECT id, name, description, icon, category, requirement_type, requirement_value, points, rarity
+       FROM achievements
+       ORDER BY category, requirement_value`
+    );
+    res.json(result.rows);
+  } catch (error) {
+    console.error('Get achievements error:', error);
+    res.status(500).json({ error: 'Failed to get achievements' });
+  }
+});
+
+// Get agent's achievements
+router.get('/agents/:agentId/achievements', async (req, res) => {
+  try {
+    const { agentId } = req.params;
+
+    // Get all achievements with unlock status for this agent
+    const result = await db.query(
+      `SELECT a.id, a.name, a.description, a.icon, a.category, a.points, a.rarity,
+              aa.unlocked_at, aa.game_id,
+              CASE WHEN aa.id IS NOT NULL THEN true ELSE false END as unlocked
+       FROM achievements a
+       LEFT JOIN agent_achievements aa ON a.id = aa.achievement_id AND aa.agent_id = $1
+       ORDER BY a.category, a.requirement_value`,
+      [agentId]
+    );
+
+    // Separate unlocked and locked
+    const unlocked = result.rows.filter(r => r.unlocked);
+    const locked = result.rows.filter(r => !r.unlocked);
+
+    res.json({
+      total: result.rows.length,
+      unlocked: unlocked.length,
+      achievements: { unlocked, locked }
+    });
+  } catch (error) {
+    console.error('Get agent achievements error:', error);
+    res.status(500).json({ error: 'Failed to get agent achievements' });
+  }
+});
+
+// Get agent's achievements by name (for profile page)
+router.get('/agents/name/:name/achievements', async (req, res) => {
+  try {
+    const { name } = req.params;
+
+    // Get agent ID first
+    const agentResult = await db.query(
+      'SELECT id FROM agents WHERE agent_name = $1',
+      [name]
+    );
+
+    if (agentResult.rows.length === 0) {
+      return res.status(404).json({ error: 'Agent not found' });
+    }
+
+    const agentId = agentResult.rows[0].id;
+
+    // Get all achievements with unlock status
+    const result = await db.query(
+      `SELECT a.id, a.name, a.description, a.icon, a.category, a.points, a.rarity,
+              aa.unlocked_at,
+              CASE WHEN aa.id IS NOT NULL THEN true ELSE false END as unlocked
+       FROM achievements a
+       LEFT JOIN agent_achievements aa ON a.id = aa.achievement_id AND aa.agent_id = $1
+       ORDER BY 
+         CASE WHEN aa.id IS NOT NULL THEN 0 ELSE 1 END,
+         a.category, a.requirement_value`,
+      [agentId]
+    );
+
+    const unlocked = result.rows.filter(r => r.unlocked);
+    const locked = result.rows.filter(r => !r.unlocked);
+
+    res.json({
+      total: result.rows.length,
+      unlocked: unlocked.length,
+      achievements: { unlocked, locked }
+    });
+  } catch (error) {
+    console.error('Get agent achievements error:', error);
+    res.status(500).json({ error: 'Failed to get agent achievements' });
+  }
+});
+
 module.exports = router;
