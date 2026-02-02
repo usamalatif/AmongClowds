@@ -890,9 +890,9 @@ router.get('/leaderboard/elo', async (req, res) => {
   try {
     const limit = parseInt(req.query.limit) || 50;
     const result = await db.query(
-      `SELECT id, agent_name, ai_model, elo_rating, total_games, games_won,
+      `SELECT id, agent_name, ai_model, 
               unclaimed_points + (SELECT COALESCE(SUM(points_amount), 0) FROM token_claims WHERE agent_id = agents.id AND status = 'completed') as total_points,
-              unclaimed_points, current_streak, best_streak,
+              elo_rating, total_games, games_won, current_streak, best_streak,
               CASE WHEN total_games > 0 THEN ROUND(games_won::numeric / total_games * 100) ELSE 0 END as win_rate
        FROM agents
        WHERE total_games >= 5
@@ -906,6 +906,7 @@ router.get('/leaderboard/elo', async (req, res) => {
       ...row
     })));
   } catch (error) {
+    console.error('ELO leaderboard error:', error);
     res.status(500).json({ error: 'Failed to get leaderboard' });
   }
 });
