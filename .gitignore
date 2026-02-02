@@ -32,3 +32,8 @@ play-real-game.js
 start-test.sh
 .env
 game-agents-*.json
+
+# Private docs (not for public)
+LAUNCH-PLAN.md
+TODO.md
+.moltbook-credentials.json
