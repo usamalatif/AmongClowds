@@ -450,45 +450,94 @@ router.get('/games/history', async (req, res) => {
 
 router.get('/game/:id', async (req, res) => {
   try {
+    // Try Redis first (active games)
     const cached = await redis.get(`game:${req.params.id}`);
-    if (!cached) {
+    
+    if (cached) {
+      const state = JSON.parse(cached);
+
+      // Calculate points for finished games if not already set
+      let pointsPerWinner = 0;
+      if (state.status === 'finished' && state.winner && state.winner !== 'abandoned') {
+        const winningRole = state.winner === 'innocents' ? 'innocent' : 'traitor';
+        const winners = state.agents.filter(a => a.role === winningRole && a.status === 'alive');
+        pointsPerWinner = Math.floor((state.prizePool || 1000) / Math.max(winners.length, 1));
+      }
+
+      const publicState = {
+        id: state.id,
+        status: state.status,
+        currentRound: state.currentRound,
+        currentPhase: state.currentPhase,
+        phaseEndsAt: state.phaseEndsAt,
+        prizePool: state.prizePool,
+        winner: state.winner,
+        agents: state.agents.map(a => {
+          const winningRole = state.winner === 'innocents' ? 'innocent' : 'traitor';
+          const isWinner = state.status === 'finished' && a.role === winningRole && a.status === 'alive';
+          return {
+            id: a.agent_id,
+            name: a.name,
+            model: a.model,
+            status: a.status,
+            role: state.status === 'finished' || a.status !== 'alive' ? a.role : undefined,
+            pointsEarned: state.status === 'finished' ? (a.pointsEarned || (isWinner ? pointsPerWinner : 0)) : undefined
+          };
+        })
+      };
+
+      return res.json(publicState);
+    }
+
+    // Fallback to database for finished games (Redis cache expired)
+    const gameResult = await db.query(
+      `SELECT id, status, winner, current_round, current_phase, created_at, finished_at
+       FROM games WHERE id = $1`,
+      [req.params.id]
+    );
+
+    if (gameResult.rows.length === 0) {
       return res.status(404).json({ error: 'Game not found' });
     }
 
-    const state = JSON.parse(cached);
+    const game = gameResult.rows[0];
 
-    // Hide traitor info for public view
-    // Calculate points for finished games if not already set
+    // Get agents for this game
+    const agentsResult = await db.query(
+      `SELECT ga.agent_id, ga.role, ga.status, a.agent_name, a.ai_model
+       FROM game_agents ga
+       JOIN agents a ON ga.agent_id = a.id
+       WHERE ga.game_id = $1`,
+      [req.params.id]
+    );
+
+    // Calculate points for winners
     let pointsPerWinner = 0;
-    if (state.status === 'finished' && state.winner) {
-      const winningRole = state.winner === 'innocents' ? 'innocent' : 'traitor';
-      const winners = state.agents.filter(a => a.role === winningRole && a.status === 'alive');
-      pointsPerWinner = Math.floor((state.prizePool || 10000) / Math.max(winners.length, 1));
+    if (game.status === 'finished' && game.winner && game.winner !== 'abandoned') {
+      const winningRole = game.winner === 'innocents' ? 'innocent' : 'traitor';
+      const winners = agentsResult.rows.filter(a => a.role === winningRole && a.status === 'alive');
+      pointsPerWinner = Math.floor(1000 / Math.max(winners.length, 1));
     }
 
     const publicState = {
-      id: state.id,
-      status: state.status,
-      currentRound: state.currentRound,
-      currentPhase: state.currentPhase,
-      phaseEndsAt: state.phaseEndsAt,
-      prizePool: state.prizePool,
-      winner: state.winner,
-      agents: state.agents.map(a => {
-        const winningRole = state.winner === 'innocents' ? 'innocent' : 'traitor';
-        const isWinner = state.status === 'finished' && a.role === winningRole && a.status === 'alive';
+      id: game.id,
+      status: game.status,
+      currentRound: game.current_round,
+      currentPhase: game.current_phase || 'ended',
+      prizePool: 1000,
+      winner: game.winner,
+      agents: agentsResult.rows.map(a => {
+        const winningRole = game.winner === 'innocents' ? 'innocent' : 'traitor';
+        const isWinner = game.status === 'finished' && a.role === winningRole && a.status === 'alive';
         return {
           id: a.agent_id,
-          name: a.name,
-          model: a.model, // Show AI model for spectators
+          name: a.agent_name,
+          model: a.ai_model,
           status: a.status,
-          // Only show role if game is over or agent is dead
-          role: state.status === 'finished' || a.status !== 'alive' ? a.role : undefined,
-          // Calculate points earned for finished games
-          pointsEarned: state.status === 'finished' ? (a.pointsEarned || (isWinner ? pointsPerWinner : 0)) : undefined
+          role: a.role,
+          pointsEarned: game.status === 'finished' ? (isWinner ? pointsPerWinner : 0) : undefined
         };
       })
-      // traitors array is intentionally excluded
     };
 
     res.json(publicState);
