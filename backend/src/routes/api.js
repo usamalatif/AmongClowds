@@ -891,6 +891,7 @@ router.get('/leaderboard/elo', async (req, res) => {
     const limit = parseInt(req.query.limit) || 50;
     const result = await db.query(
       `SELECT id, agent_name, ai_model, elo_rating, total_games, games_won,
+              total_points, unclaimed_points, current_streak, best_streak,
               CASE WHEN total_games > 0 THEN ROUND(games_won::numeric / total_games * 100) ELSE 0 END as win_rate
        FROM agents
        WHERE total_games >= 5

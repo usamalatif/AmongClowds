@@ -120,11 +120,14 @@ export default function LandingPage() {
 
 				{/* Hot Streak Banner */}
 				{stats?.hotStreak && stats.hotStreak.current_streak >= 2 && (
-					<div className="mb-8 inline-flex items-center gap-2 bg-gradient-to-r from-orange-600 to-red-600 px-6 py-2 rounded-full animate-pulse">
+					<Link 
+						href={`/agent/${stats.hotStreak.agent_name}`}
+						className="mb-8 inline-flex items-center gap-2 bg-gradient-to-r from-orange-600 to-red-600 px-6 py-2 rounded-full animate-pulse hover:scale-105 transition-transform cursor-pointer"
+					>
 						<Flame className="w-5 h-5" />
 						<span className="font-bold">{stats.hotStreak.agent_name}</span>
 						<span>is on a 🔥 {stats.hotStreak.current_streak} WIN STREAK!</span>
-					</div>
+					</Link>
 				)}
 
 				{/* Onboarding Box */}
@@ -176,58 +179,6 @@ export default function LandingPage() {
 					</div>
 				</div>
 			</section>
-
-			{/* Live Stats Bar */}
-			{stats && (
-				<section className="py-4 md:py-8 px-3 md:px-8 bg-black/50 border-y border-purple-500/30">
-					<div className="max-w-6xl mx-auto grid grid-cols-2 md:grid-cols-4 gap-3 md:gap-6 text-center">
-						<div className="group">
-							<div className="flex items-center justify-center gap-1.5 md:gap-2 mb-0.5 md:mb-1">
-								<Users className="w-4 h-4 md:w-5 md:h-5 text-purple-400" />
-								<p className="text-2xl md:text-4xl font-black text-purple-400">
-									{stats.totalAgents}
-								</p>
-							</div>
-							<p className="text-gray-400 text-xs md:text-sm font-medium">
-								AGENTS
-							</p>
-						</div>
-						<div className="group">
-							<div className="flex items-center justify-center gap-1.5 md:gap-2 mb-0.5 md:mb-1">
-								<Skull className="w-4 h-4 md:w-5 md:h-5 text-red-400" />
-								<p className="text-2xl md:text-4xl font-black text-red-400">
-									{stats.totalGames}
-								</p>
-							</div>
-							<p className="text-gray-400 text-xs md:text-sm font-medium">
-								GAMES
-							</p>
-						</div>
-						<div className="group">
-							<div className="flex items-center justify-center gap-1.5 md:gap-2 mb-0.5 md:mb-1">
-								<Coins className="w-4 h-4 md:w-5 md:h-5 text-yellow-400" />
-								<p className="text-2xl md:text-4xl font-black text-yellow-400">
-									{formatNumber(stats.totalPointsEarned)}
-								</p>
-							</div>
-							<p className="text-gray-400 text-xs md:text-sm font-medium">
-								POINTS
-							</p>
-						</div>
-						<div className="group">
-							<div className="flex items-center justify-center gap-1.5 md:gap-2 mb-0.5 md:mb-1">
-								<Flame className="w-4 h-4 md:w-5 md:h-5 text-orange-400" />
-								<p className="text-2xl md:text-4xl font-black text-orange-400">
-									{stats.bestStreak?.best_streak || 0}
-								</p>
-							</div>
-							<p className="text-gray-400 text-xs md:text-sm font-medium">
-								BEST STREAK
-							</p>
-						</div>
-					</div>
-				</section>
-			)}
 
 			{/* Live Games Section - Full Width List */}
 			<section className="py-10 md:py-16 px-4 md:px-8 bg-black/30">
@@ -316,6 +267,58 @@ export default function LandingPage() {
 					</Link>
 				</div>
 			</section>
+
+			{/* Live Stats Bar */}
+			{stats && (
+				<section className="py-4 md:py-8 px-3 md:px-8 bg-black/50 border-y border-purple-500/30">
+					<div className="max-w-6xl mx-auto grid grid-cols-2 md:grid-cols-4 gap-3 md:gap-6 text-center">
+						<div className="group">
+							<div className="flex items-center justify-center gap-1.5 md:gap-2 mb-0.5 md:mb-1">
+								<Users className="w-4 h-4 md:w-5 md:h-5 text-purple-400" />
+								<p className="text-2xl md:text-4xl font-black text-purple-400">
+									{stats.totalAgents}
+								</p>
+							</div>
+							<p className="text-gray-400 text-xs md:text-sm font-medium">
+								AGENTS
+							</p>
+						</div>
+						<div className="group">
+							<div className="flex items-center justify-center gap-1.5 md:gap-2 mb-0.5 md:mb-1">
+								<Skull className="w-4 h-4 md:w-5 md:h-5 text-red-400" />
+								<p className="text-2xl md:text-4xl font-black text-red-400">
+									{stats.totalGames}
+								</p>
+							</div>
+							<p className="text-gray-400 text-xs md:text-sm font-medium">
+								GAMES
+							</p>
+						</div>
+						<div className="group">
+							<div className="flex items-center justify-center gap-1.5 md:gap-2 mb-0.5 md:mb-1">
+								<Coins className="w-4 h-4 md:w-5 md:h-5 text-yellow-400" />
+								<p className="text-2xl md:text-4xl font-black text-yellow-400">
+									{formatNumber(stats.totalPointsEarned)}
+								</p>
+							</div>
+							<p className="text-gray-400 text-xs md:text-sm font-medium">
+								POINTS
+							</p>
+						</div>
+						<div className="group">
+							<div className="flex items-center justify-center gap-1.5 md:gap-2 mb-0.5 md:mb-1">
+								<Flame className="w-4 h-4 md:w-5 md:h-5 text-orange-400" />
+								<p className="text-2xl md:text-4xl font-black text-orange-400">
+									{stats.bestStreak?.best_streak || 0}
+								</p>
+							</div>
+							<p className="text-gray-400 text-xs md:text-sm font-medium">
+								BEST STREAK
+							</p>
+						</div>
+					</div>
+				</section>
+			)}
 
 			{/* Game Rules - Gamified */}
 			<section className="py-10 md:py-16 px-4 md:px-8">

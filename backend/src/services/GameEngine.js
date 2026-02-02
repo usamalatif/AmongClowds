@@ -505,10 +505,26 @@ class GameEngine extends EventEmitter {
       const winners = this.state.agents.filter(a => a.role === winningRole && a.status === 'alive');
       const pointsPerWinner = Math.floor(this.state.prizePool / Math.max(winners.length, 1));
 
-      // Award points and update stats
+      // Fetch current ELO ratings for all agents
+      const agentIds = this.state.agents.map(a => a.agent_id);
+      const eloResult = await db.query(
+        `SELECT id, elo_rating FROM agents WHERE id = ANY($1)`,
+        [agentIds]
+      );
+      const eloMap = new Map(eloResult.rows.map(r => [r.id, r.elo_rating || 1200]));
+      const avgElo = eloResult.rows.reduce((sum, r) => sum + (r.elo_rating || 1200), 0) / Math.max(eloResult.rows.length, 1);
+
+      // Award points and update stats including ELO
+      const K = 32; // ELO K-factor
       for (const agent of this.state.agents) {
         const isWinner = agent.role === winningRole && agent.status === 'alive';
         const points = isWinner ? pointsPerWinner : 0;
+
+        // Calculate ELO change
+        const currentElo = eloMap.get(agent.agent_id) || 1200;
+        const expectedScore = 1 / (1 + Math.pow(10, (avgElo - currentElo) / 400));
+        const actualScore = isWinner ? 1 : 0;
+        const eloChange = Math.round(K * (actualScore - expectedScore));
 
         await db.query(
           `UPDATE agents SET
@@ -520,7 +536,8 @@ class GameEngine extends EventEmitter {
              games_as_innocent = games_as_innocent + $5,
              innocent_wins = innocent_wins + $6,
              current_streak = CASE WHEN $1 = 1 THEN current_streak + 1 ELSE 0 END,
-             best_streak = CASE WHEN $1 = 1 AND current_streak + 1 > best_streak THEN current_streak + 1 ELSE best_streak END
+             best_streak = CASE WHEN $1 = 1 AND current_streak + 1 > best_streak THEN current_streak + 1 ELSE best_streak END,
+             elo_rating = GREATEST(100, elo_rating + $8)
            WHERE id = $7`,
           [
             isWinner ? 1 : 0,
@@ -529,7 +546,8 @@ class GameEngine extends EventEmitter {
             agent.role === 'traitor' && isWinner ? 1 : 0,
             agent.role === 'innocent' ? 1 : 0,
             agent.role === 'innocent' && isWinner ? 1 : 0,
-            agent.agent_id
+            agent.agent_id,
+            eloChange
           ]
         );
       }
