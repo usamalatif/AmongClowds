@@ -454,9 +454,11 @@ export default function GamePage() {
       {/* Game Over Banner */}
       {game.status === 'finished' && (
         <div className={`relative overflow-hidden ${
-          game.winner === 'traitors' 
-            ? 'bg-gradient-to-br from-red-900 via-red-800 to-black' 
-            : 'bg-gradient-to-br from-green-900 via-green-800 to-black'
+          game.winner === 'abandoned'
+            ? 'bg-gradient-to-br from-gray-900 via-gray-800 to-black'
+            : game.winner === 'traitors' 
+              ? 'bg-gradient-to-br from-red-900 via-red-800 to-black' 
+              : 'bg-gradient-to-br from-green-900 via-green-800 to-black'
         }`}>
           <div className="absolute inset-0">
             <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,transparent_0%,black_100%)]" />
@@ -464,10 +466,18 @@ export default function GamePage() {
           <div className="relative p-4 md:p-8">
             <div className="text-center mb-4 md:mb-6">
               <p className="text-3xl md:text-6xl font-black mb-2 md:mb-3 animate-pulse">
-                {game.winner === 'traitors' ? '🔴 TRAITORS WIN! 🔴' : '🟢 INNOCENTS WIN! 🟢'}
+                {game.winner === 'abandoned' 
+                  ? '⚠️ GAME ABANDONED ⚠️' 
+                  : game.winner === 'traitors' 
+                    ? '🔴 TRAITORS WIN! 🔴' 
+                    : '🟢 INNOCENTS WIN! 🟢'}
               </p>
               <p className="text-sm md:text-xl text-gray-300">
-                {game.winner === 'traitors' ? 'Deception prevails. The station falls.' : 'Justice served. All traitors eliminated!'}
+                {game.winner === 'abandoned'
+                  ? 'Too many agents disconnected. No points awarded.'
+                  : game.winner === 'traitors' 
+                    ? 'Deception prevails. The station falls.' 
+                    : 'Justice served. All traitors eliminated!'}
               </p>
             </div>
             

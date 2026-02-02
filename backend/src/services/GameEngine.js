@@ -433,13 +433,36 @@ class GameEngine extends EventEmitter {
     const alive = this.state.agents.filter(a => a.status === 'alive');
     const aliveTraitors = alive.filter(a => a.role === 'traitor');
     const aliveInnocents = alive.filter(a => a.role === 'innocent');
+    
+    // Count disconnected agents
+    const disconnected = this.state.agents.filter(a => a.status === 'disconnected');
+    const totalPlayers = this.state.agents.length;
 
-    console.log(`Game ${this.gameId}: Checking end - ${aliveTraitors.length} traitors, ${aliveInnocents.length} innocents alive`);
+    console.log(`Game ${this.gameId}: Checking end - ${aliveTraitors.length} traitors, ${aliveInnocents.length} innocents alive, ${disconnected.length} disconnected`);
 
-    // Innocents win if ALL traitors are eliminated
-    if (aliveTraitors.length === 0) {
+    // If too many disconnected (>50%), abandon the game - no winner
+    if (disconnected.length > totalPlayers / 2) {
+      this.state.winner = 'abandoned';
+      this.state.winReason = 'Too many agents disconnected. Game abandoned.';
+      await this.endGame();
+      return true;
+    }
+
+    // Innocents win if ALL traitors are eliminated (not just disconnected)
+    // Only count if traitors were actually eliminated via gameplay
+    const eliminatedTraitors = this.state.agents.filter(a => a.role === 'traitor' && a.status === 'banished');
+    const disconnectedTraitors = this.state.agents.filter(a => a.role === 'traitor' && a.status === 'disconnected');
+    
+    if (aliveTraitors.length === 0 && eliminatedTraitors.length > 0) {
+      // At least one traitor was legitimately banished
       this.state.winner = 'innocents';
       this.state.winReason = 'All traitors have been found and eliminated!';
+      await this.endGame();
+      return true;
+    } else if (aliveTraitors.length === 0 && disconnectedTraitors.length > 0 && eliminatedTraitors.length === 0) {
+      // All traitors just disconnected - abandon instead
+      this.state.winner = 'abandoned';
+      this.state.winReason = 'All traitors disconnected. Game abandoned.';
       await this.endGame();
       return true;
     }
@@ -463,11 +486,6 @@ class GameEngine extends EventEmitter {
     this.state.status = 'finished';
     this.state.currentPhase = 'ended';
 
-    // Calculate points - convert plural winner to singular role
-    const winningRole = this.state.winner === 'innocents' ? 'innocent' : 'traitor';
-    const winners = this.state.agents.filter(a => a.role === winningRole && a.status === 'alive');
-    const pointsPerWinner = Math.floor(this.state.prizePool / Math.max(winners.length, 1));
-
     // Update database
     await db.query(
       `UPDATE games SET status = 'finished', winner = $1, finished_at = NOW()
@@ -475,33 +493,43 @@ class GameEngine extends EventEmitter {
       [this.state.winner, this.gameId]
     );
 
-    // Award points and update stats
-    for (const agent of this.state.agents) {
-      const isWinner = agent.role === winningRole && agent.status === 'alive';
-      const points = isWinner ? pointsPerWinner : 0;
+    // If game was abandoned, don't update stats or distribute points
+    if (this.state.winner === 'abandoned') {
+      console.log(`Game ${this.gameId}: Abandoned - no points distributed`);
+    } else {
+      // Calculate points - convert plural winner to singular role
+      const winningRole = this.state.winner === 'innocents' ? 'innocent' : 'traitor';
+      const winners = this.state.agents.filter(a => a.role === winningRole && a.status === 'alive');
+      const pointsPerWinner = Math.floor(this.state.prizePool / Math.max(winners.length, 1));
 
-      await db.query(
-        `UPDATE agents SET
-           total_games = total_games + 1,
-           games_won = games_won + $1,
-           unclaimed_points = unclaimed_points + $2,
-           games_as_traitor = games_as_traitor + $3,
-           traitor_wins = traitor_wins + $4,
-           games_as_innocent = games_as_innocent + $5,
-           innocent_wins = innocent_wins + $6,
-           current_streak = CASE WHEN $1 = 1 THEN current_streak + 1 ELSE 0 END,
-           best_streak = CASE WHEN $1 = 1 AND current_streak + 1 > best_streak THEN current_streak + 1 ELSE best_streak END
-         WHERE id = $7`,
-        [
-          isWinner ? 1 : 0,
-          points,
-          agent.role === 'traitor' ? 1 : 0,
-          agent.role === 'traitor' && isWinner ? 1 : 0,
-          agent.role === 'innocent' ? 1 : 0,
-          agent.role === 'innocent' && isWinner ? 1 : 0,
-          agent.agent_id
-        ]
-      );
+      // Award points and update stats
+      for (const agent of this.state.agents) {
+        const isWinner = agent.role === winningRole && agent.status === 'alive';
+        const points = isWinner ? pointsPerWinner : 0;
+
+        await db.query(
+          `UPDATE agents SET
+             total_games = total_games + 1,
+             games_won = games_won + $1,
+             unclaimed_points = unclaimed_points + $2,
+             games_as_traitor = games_as_traitor + $3,
+             traitor_wins = traitor_wins + $4,
+             games_as_innocent = games_as_innocent + $5,
+             innocent_wins = innocent_wins + $6,
+             current_streak = CASE WHEN $1 = 1 THEN current_streak + 1 ELSE 0 END,
+             best_streak = CASE WHEN $1 = 1 AND current_streak + 1 > best_streak THEN current_streak + 1 ELSE best_streak END
+           WHERE id = $7`,
+          [
+            isWinner ? 1 : 0,
+            points,
+            agent.role === 'traitor' ? 1 : 0,
+            agent.role === 'traitor' && isWinner ? 1 : 0,
+            agent.role === 'innocent' ? 1 : 0,
+            agent.role === 'innocent' && isWinner ? 1 : 0,
+            agent.agent_id
+          ]
+        );
+      }
     }
 
     // Remove from active games
@@ -517,16 +545,22 @@ class GameEngine extends EventEmitter {
     await this.saveState();
 
     // Broadcast game end
+    const isAbandoned = this.state.winner === 'abandoned';
+    const winningRole = this.state.winner === 'innocents' ? 'innocent' : 'traitor';
+    const winners = isAbandoned ? [] : this.state.agents.filter(a => a.role === winningRole && a.status === 'alive');
+    const pointsPerWinner = isAbandoned ? 0 : Math.floor(this.state.prizePool / Math.max(winners.length, 1));
+
     broadcastToGame(this.io, this.gameId, 'game_ended', {
       winner: this.state.winner,
-      winReason: this.state.winReason || `${this.state.winner} win!`,
+      winReason: this.state.winReason || (isAbandoned ? 'Game abandoned' : `${this.state.winner} win!`),
+      abandoned: isAbandoned,
       agents: this.state.agents.map(a => ({
         id: a.agent_id,
         name: a.name,
         role: a.role,
         status: a.status,
         model: a.model,
-        pointsEarned: a.role === winningRole && a.status === 'alive' ? pointsPerWinner : 0
+        pointsEarned: isAbandoned ? 0 : (a.role === winningRole && a.status === 'alive' ? pointsPerWinner : 0)
       }))
     });
   }
