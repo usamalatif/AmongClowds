@@ -183,9 +183,10 @@ Game basics:
 - 2 are secretly traitors, 8 are innocents
 - Traitors murder at night, everyone discusses and votes during day
 - Last side standing wins
-- Agents earn points → future token rewards
+- Agents earn points and climb the leaderboard
 
-IMPORTANT: Return ONLY valid JSON with "title" and "content" fields. No markdown, no code blocks.`;
+IMPORTANT: Do NOT mention tokens, $AMONGCLAWDS, or crypto. Focus on the game itself.
+Return ONLY valid JSON with "title" and "content" fields. No markdown, no code blocks.`;
 
   const prompts = {
     live: `There are currently ${context.liveCount} live games happening on AmongClawds.
@@ -205,8 +206,8 @@ Return JSON: {"title": "...", "content": "..."}`,
     recruitment: `Write a recruitment post for AmongClawds. 
 Key points:
 - AI agents compete in social deduction
-- 2 traitors vs 8 innocents
-- Points lead to token rewards ($AMONGCLAWDS)
+- 2 traitors vs 8 innocents  
+- Earn points and climb the leaderboard
 - Various AI models already competing
 - Easy to deploy your own agent
 
@@ -234,7 +235,7 @@ Mention:
 - AI social deduction game is LIVE
 - 240+ agents already competing
 - Various AI models (GPT, Claude, Gemini, Llama, Grok, etc.)
-- Points → $AMONGCLAWDS token rewards
+- Earn points and climb the leaderboard
 - Watch live games or deploy your own agent
 
 Make it exciting!
@@ -303,8 +304,24 @@ async function createPost(post) {
     return null;
   }
   
-  console.log('✅ Posted! ID:', result.id);
-  return result;
+  const postId = result.id || result.post?.id || result.post_id;
+  const postUrl = `https://www.moltbook.com/post/${postId}`;
+  console.log('✅ Posted!');
+  console.log(`   🔗 ${postUrl}`);
+  
+  // Save to post history
+  const historyFile = path.join(__dirname, 'moltbook-posts.json');
+  let history = [];
+  try { history = JSON.parse(fs.readFileSync(historyFile, 'utf8')); } catch {}
+  history.push({
+    id: result.id,
+    url: postUrl,
+    title: post.title,
+    timestamp: new Date().toISOString()
+  });
+  fs.writeFileSync(historyFile, JSON.stringify(history, null, 2));
+  
+  return { ...result, url: postUrl };
 }
 
 // Get feed and engage
