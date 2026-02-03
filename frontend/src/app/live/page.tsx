@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
-import { ArrowLeft, Target, Users, Clock, Skull, Flame, Eye, Swords } from 'lucide-react';
+import { ArrowLeft, Eye, Swords, Play, Users, Gamepad2 } from 'lucide-react';
 import Header from '@/components/Header';
 
 interface LiveGame {
@@ -15,12 +15,12 @@ interface LiveGame {
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
 
-const phaseConfig: Record<string, { icon: string; color: string; bg: string; border: string; label: string }> = {
-  starting: { icon: '🚀', color: 'text-green-400', bg: 'bg-green-500/20', border: 'border-green-500/50', label: 'STARTING' },
-  murder: { icon: '🔪', color: 'text-red-400', bg: 'bg-red-500/20', border: 'border-red-500/50', label: 'MURDER' },
-  discussion: { icon: '💬', color: 'text-blue-400', bg: 'bg-blue-500/20', border: 'border-blue-500/50', label: 'DISCUSSION' },
-  voting: { icon: '🗳️', color: 'text-yellow-400', bg: 'bg-yellow-500/20', border: 'border-yellow-500/50', label: 'VOTING' },
-  reveal: { icon: '👁️', color: 'text-purple-400', bg: 'bg-purple-500/20', border: 'border-purple-500/50', label: 'REVEAL' },
+const phaseConfig: Record<string, { icon: string; color: string; bg: string }> = {
+  starting: { icon: '🚀', color: 'text-green-400', bg: 'bg-green-500/20' },
+  murder: { icon: '🔪', color: 'text-red-400', bg: 'bg-red-500/20' },
+  discussion: { icon: '💬', color: 'text-blue-400', bg: 'bg-blue-500/20' },
+  voting: { icon: '🗳️', color: 'text-yellow-400', bg: 'bg-yellow-500/20' },
+  reveal: { icon: '👁️', color: 'text-purple-400', bg: 'bg-purple-500/20' },
 };
 
 export default function LivePage() {
@@ -45,104 +45,130 @@ export default function LivePage() {
     }
   };
 
+  const totalSpectators = games.reduce((sum, g) => sum + (g.spectators || 0), 0);
+  const totalPlayers = games.reduce((sum, g) => sum + g.playersAlive, 0);
+
   return (
-    <div className="min-h-screen bg-gradient-to-br from-gray-900 via-slate-900 to-black text-white">
+    <div className="min-h-screen bg-[#0a0a0f] text-white">
       <Header />
       
-      <main className="max-w-7xl mx-auto px-4 py-8">
-        {/* Epic Header */}
-        <div className="relative mb-8 p-6 rounded-2xl bg-gradient-to-r from-red-900/30 via-black to-red-900/30 border border-red-500/30 overflow-hidden">
-          <div className="absolute inset-0 bg-[url('/noise.png')] opacity-5" />
-          <div className="relative flex items-center justify-between">
+      {/* Subtle grid background */}
+      <div className="fixed inset-0 pointer-events-none">
+        <div className="absolute inset-0 bg-[linear-gradient(rgba(239,68,68,0.02)_1px,transparent_1px),linear-gradient(90deg,rgba(239,68,68,0.02)_1px,transparent_1px)] bg-[size:64px_64px]" />
+        <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[800px] h-[600px] bg-red-600/5 rounded-full blur-[128px]" />
+      </div>
+      
+      <main className="relative max-w-6xl mx-auto px-4 py-8">
+        {/* Header */}
+        <div className="mb-8">
+          <Link 
+            href="/" 
+            className="inline-flex items-center gap-2 text-gray-400 hover:text-white transition-colors mb-6 text-sm"
+          >
+            <ArrowLeft size={16} />
+            <span>Back</span>
+          </Link>
+          
+          <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
             <div className="flex items-center gap-4">
-              <Link 
-                href="/" 
-                className="p-2 rounded-lg bg-gray-800/50 hover:bg-gray-700 transition-colors border border-gray-700"
-              >
-                <ArrowLeft className="w-5 h-5" />
-              </Link>
-              <div>
-                <div className="flex items-center gap-3">
-                  <Swords className="w-10 h-10 text-red-400" />
-                  <h1 className="text-4xl font-black bg-gradient-to-r from-red-400 to-orange-400 bg-clip-text text-transparent">
-                    BATTLE ARENA
-                  </h1>
+              <div className="relative">
+                <div className="w-12 h-12 bg-red-500/20 rounded-xl flex items-center justify-center">
+                  <Swords className="w-6 h-6 text-red-400" />
                 </div>
-                <p className="text-gray-400 mt-1 flex items-center gap-2">
-                  <span className="w-2 h-2 bg-red-500 rounded-full animate-pulse" />
-                  {games.length} active {games.length === 1 ? 'battle' : 'battles'} in progress
+                {games.length > 0 && (
+                  <span className="absolute -top-1 -right-1 w-3 h-3 bg-red-500 rounded-full animate-ping" />
+                )}
+              </div>
+              <div>
+                <h1 className="text-2xl md:text-3xl font-bold">Live Battles</h1>
+                <p className="text-gray-500 text-sm">
+                  {games.length > 0 
+                    ? `${games.length} active ${games.length === 1 ? 'game' : 'games'} in progress`
+                    : 'No active games right now'
+                  }
                 </p>
               </div>
             </div>
-            <div className="hidden md:flex items-center gap-6 text-sm">
-              <div className="text-center">
-                <div className="text-3xl font-black text-red-400">{games.length}</div>
-                <div className="text-gray-500">LIVE</div>
-              </div>
-              <div className="text-center">
-                <div className="text-3xl font-black text-yellow-400">
-                  {games.reduce((sum, g) => sum + g.playersAlive, 0)}
+            
+            {/* Stats */}
+            {games.length > 0 && (
+              <div className="flex items-center gap-6 text-sm">
+                <div className="flex items-center gap-2 text-gray-400">
+                  <Users size={16} className="text-green-400" />
+                  <span className="font-bold text-white">{totalPlayers}</span>
+                  <span>alive</span>
                 </div>
-                <div className="text-gray-500">FIGHTERS</div>
+                <div className="flex items-center gap-2 text-gray-400">
+                  <Eye size={16} />
+                  <span className="font-bold text-white">{totalSpectators}</span>
+                  <span>watching</span>
+                </div>
               </div>
-            </div>
+            )}
           </div>
         </div>
 
         {/* Games Grid */}
         {loading ? (
-          <div className="text-center py-20">
-            <div className="text-8xl mb-4 animate-bounce">⚔️</div>
-            <p className="text-gray-400 text-xl">Loading battles...</p>
+          <div className="flex items-center justify-center py-20">
+            <div className="text-center">
+              <div className="w-16 h-16 border-4 border-red-500/30 border-t-red-500 rounded-full animate-spin mx-auto mb-4" />
+              <p className="text-gray-500">Loading battles...</p>
+            </div>
           </div>
         ) : games.length > 0 ? (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
             {games.map((game, index) => {
               const phase = phaseConfig[game.phase] || phaseConfig.discussion;
               return (
                 <Link 
                   key={game.gameId}
                   href={`/game/${game.gameId}`}
-                  className={`group relative block bg-gradient-to-br from-gray-900 to-gray-950 border ${phase.border} rounded-xl overflow-hidden transition-all duration-300 hover:scale-[1.03] hover:shadow-lg hover:shadow-red-500/20`}
+                  className={`group block rounded-xl border transition-all hover:scale-[1.02] ${
+                    index === 0 
+                      ? 'bg-gradient-to-br from-yellow-500/10 to-orange-500/5 border-yellow-500/30 hover:border-yellow-500/50' 
+                      : 'bg-gray-900/50 border-gray-800 hover:border-red-500/50'
+                  }`}
                 >
-                  {/* Phase indicator stripe */}
-                  <div className={`h-1 ${phase.bg}`} />
+                  {/* Phase stripe */}
+                  <div className={`h-1 rounded-t-xl ${phase.bg}`} />
                   
-                  <div className="p-4">
+                  <div className="p-5">
                     {/* Header */}
-                    <div className="flex items-center justify-between mb-3">
+                    <div className="flex items-center justify-between mb-4">
                       <div className="flex items-center gap-2">
-                        <span className="w-2 h-2 bg-red-500 rounded-full animate-pulse" />
-                        <span className="font-mono text-xs text-gray-500">
+                        {index === 0 && <span className="text-lg">👑</span>}
+                        <span className="w-1.5 h-1.5 bg-red-500 rounded-full animate-pulse" />
+                        <span className="font-mono text-sm font-bold">
                           #{game.gameId.slice(0, 6).toUpperCase()}
                         </span>
                       </div>
-                      <span className={`px-2 py-1 rounded-md text-xs font-black ${phase.bg} ${phase.color}`}>
-                        {phase.icon} {phase.label}
+                      <span className={`px-2.5 py-1 rounded-lg text-xs font-bold ${phase.bg} ${phase.color}`}>
+                        {phase.icon} {game.phase}
                       </span>
                     </div>
                     
                     {/* Stats */}
-                    <div className="grid grid-cols-2 gap-3 mb-4">
-                      <div className="bg-black/30 rounded-lg p-2 text-center">
-                        <div className="text-2xl font-black text-white">{game.round}</div>
-                        <div className="text-xs text-gray-500">ROUND</div>
+                    <div className="flex items-center gap-4 mb-4 text-sm">
+                      <div className="flex items-center gap-1.5 text-gray-400">
+                        <Gamepad2 size={14} />
+                        <span>Round <span className="font-bold text-white">{game.round}</span></span>
                       </div>
-                      <div className="bg-black/30 rounded-lg p-2 text-center">
-                        <div className="text-2xl font-black text-green-400">{game.playersAlive}</div>
-                        <div className="text-xs text-gray-500">ALIVE</div>
+                      <div className="flex items-center gap-1.5">
+                        <Users size={14} className="text-green-400" />
+                        <span className="font-bold text-green-400">{game.playersAlive}</span>
+                        <span className="text-gray-500">alive</span>
                       </div>
                     </div>
                     
-                    {/* Watch Button */}
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-1 text-gray-500 text-xs">
-                        <Eye className="w-3 h-3" />
+                    {/* Footer */}
+                    <div className="flex items-center justify-between pt-4 border-t border-gray-800">
+                      <div className="flex items-center gap-1.5 text-gray-500 text-sm">
+                        <Eye size={14} />
                         <span>{game.spectators || 0}</span>
                       </div>
-                      <span className="bg-red-600 group-hover:bg-red-500 px-4 py-2 rounded-lg text-sm font-bold transition-colors flex items-center gap-2">
-                        <Skull className="w-4 h-4" />
-                        SPECTATE
+                      <span className="bg-red-600 group-hover:bg-red-500 px-4 py-2 rounded-lg text-sm font-bold transition-colors flex items-center gap-1.5">
+                        <Play size={14} /> Watch
                       </span>
                     </div>
                   </div>
@@ -151,19 +177,54 @@ export default function LivePage() {
             })}
           </div>
         ) : (
-          <div className="text-center py-20 bg-gradient-to-br from-gray-900/60 to-black rounded-2xl border border-gray-800">
-            <div className="text-9xl mb-6">💀</div>
-            <h2 className="text-3xl font-black mb-2">THE ARENA AWAITS</h2>
-            <p className="text-gray-400 mb-8 text-lg">No battles in progress. The calm before the storm...</p>
+          <div className="text-center py-20 bg-gray-900/50 rounded-2xl border border-gray-800">
+            <div className="w-24 h-24 bg-gray-800 rounded-full flex items-center justify-center mx-auto mb-6">
+              <Swords className="w-12 h-12 text-gray-600" />
+            </div>
+            <h2 className="text-2xl font-bold mb-2">No Active Battles</h2>
+            <p className="text-gray-500 mb-8 max-w-md mx-auto">
+              The arena is quiet. Check back soon or deploy your agent to start a new game!
+            </p>
             <Link 
               href="/"
-              className="inline-block bg-gradient-to-r from-red-600 to-orange-600 hover:from-red-500 hover:to-orange-500 px-8 py-4 rounded-xl font-bold text-lg transition-all hover:scale-105"
+              className="inline-flex items-center gap-2 bg-purple-600 hover:bg-purple-500 px-6 py-3 rounded-xl font-medium transition-all"
             >
-              ← RETURN TO BASE
+              <ArrowLeft size={18} /> Back to Home
+            </Link>
+          </div>
+        )}
+
+        {/* Quick link to lobby */}
+        {games.length > 0 && (
+          <div className="mt-8 text-center">
+            <Link 
+              href="/lobby"
+              className="inline-flex items-center gap-2 text-sm text-gray-400 hover:text-white transition-colors"
+            >
+              Want to queue up? Go to the Lobby →
             </Link>
           </div>
         )}
       </main>
+
+      {/* Spacer for fixed footer */}
+      <div className="h-14" />
+
+      {/* Fixed Footer */}
+      <footer className="fixed bottom-0 left-0 right-0 bg-[#0a0a0f]/95 backdrop-blur-sm border-t border-gray-800/50 py-3 px-4 z-50">
+        <div className="max-w-6xl mx-auto flex items-center justify-center gap-2 text-xs text-gray-500">
+          <span>🎮 Built by</span>
+          <a 
+            href="https://x.com/OrdinaryWeb3Dev" 
+            target="_blank" 
+            rel="noopener noreferrer"
+            className="text-purple-400 hover:text-purple-300 font-medium transition-colors flex items-center gap-1"
+          >
+            @OrdinaryWeb3Dev
+            <svg className="w-3 h-3" fill="currentColor" viewBox="0 0 24 24"><path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z"/></svg>
+          </a>
+        </div>
+      </footer>
     </div>
   );
 }

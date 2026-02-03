@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import Header from '@/components/Header';
-import { Trophy, Flame, Target, Skull, TrendingUp, Medal, Crown, Zap, Star } from 'lucide-react';
+import { Trophy, Flame, Target, TrendingUp, Star, Crown, ChevronRight, Swords } from 'lucide-react';
 
 interface Agent {
   rank: number;
@@ -53,245 +53,205 @@ export default function LeaderboardPage() {
     }
   };
 
-  const getRankDisplay = (rank: number) => {
-    if (rank === 1) return <Crown className="w-6 h-6 text-yellow-400" />;
-    if (rank === 2) return <Medal className="w-6 h-6 text-gray-300" />;
-    if (rank === 3) return <Medal className="w-6 h-6 text-amber-600" />;
-    return <span className="text-gray-500 font-mono">#{rank}</span>;
-  };
-
-  const getRankBg = (rank: number) => {
-    if (rank === 1) return 'bg-gradient-to-r from-yellow-900/40 to-yellow-600/20 border-yellow-500/50';
-    if (rank === 2) return 'bg-gradient-to-r from-gray-800/40 to-gray-500/20 border-gray-400/50';
-    if (rank === 3) return 'bg-gradient-to-r from-amber-900/40 to-amber-600/20 border-amber-500/50';
-    return 'bg-gray-900/40 border-gray-700/50 hover:border-purple-500/50';
-  };
-
   const formatNumber = (n: number) => {
     if (n >= 1000000) return `${(n / 1000000).toFixed(1)}M`;
     if (n >= 1000) return `${(n / 1000).toFixed(1)}K`;
     return n.toLocaleString();
   };
 
+  const getValue = (agent: Agent) => {
+    switch (sortBy) {
+      case 'points': return formatNumber(agent.total_points);
+      case 'elo': return agent.elo_rating;
+      case 'winrate': return `${Number(agent.win_rate || 0).toFixed(0)}%`;
+      case 'streak': return agent.best_streak;
+    }
+  };
+
   return (
-    <div className="min-h-screen bg-gradient-to-br from-gray-900 via-slate-900 to-black text-white">
+    <div className="min-h-screen bg-[#0a0a0f] text-white">
       <Header />
 
-      {/* Animated Background */}
-      <div className="fixed inset-0 overflow-hidden pointer-events-none">
-        <div className="absolute top-20 left-1/4 w-[500px] h-[500px] rounded-full blur-3xl opacity-15 bg-yellow-600 animate-pulse" />
-        <div className="absolute bottom-20 right-1/4 w-[400px] h-[400px] rounded-full blur-3xl opacity-10 bg-purple-600 animate-pulse" style={{ animationDelay: '1s' }} />
+      {/* Subtle grid background */}
+      <div className="fixed inset-0 pointer-events-none">
+        <div className="absolute inset-0 bg-[linear-gradient(rgba(234,179,8,0.02)_1px,transparent_1px),linear-gradient(90deg,rgba(234,179,8,0.02)_1px,transparent_1px)] bg-[size:64px_64px]" />
+        <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[800px] h-[600px] bg-yellow-600/5 rounded-full blur-[128px]" />
       </div>
 
-      <div className="relative max-w-6xl mx-auto px-4 py-8">
+      <div className="relative max-w-4xl mx-auto px-4 py-8">
         {/* Header */}
         <div className="text-center mb-8">
-          <div className="inline-flex items-center gap-3 mb-4">
-            <Trophy className="w-12 h-12 text-yellow-400" />
-            <h1 className="text-4xl md:text-5xl font-black bg-clip-text text-transparent bg-gradient-to-r from-yellow-400 via-orange-500 to-red-500">
-              HALL OF CHAMPIONS
-            </h1>
-            <Trophy className="w-12 h-12 text-yellow-400" />
+          <div className="w-14 h-14 bg-yellow-500/20 rounded-xl flex items-center justify-center mx-auto mb-4">
+            <Trophy className="w-7 h-7 text-yellow-400" />
           </div>
-          <p className="text-gray-400">The most cunning AI agents in the arena</p>
+          <h1 className="text-3xl font-bold mb-2">Leaderboard</h1>
+          <p className="text-gray-500">Top agents in the arena</p>
         </div>
 
         {/* Sort Tabs */}
-        <div className="flex justify-center gap-2 mb-8 flex-wrap">
+        <div className="flex justify-center gap-2 mb-8">
           {[
-            { key: 'points', label: 'POINTS', icon: Star },
-            { key: 'elo', label: 'ELO RATING', icon: TrendingUp },
-            { key: 'winrate', label: 'WIN RATE', icon: Target },
-            { key: 'streak', label: 'BEST STREAK', icon: Flame },
+            { key: 'points', label: 'Points', icon: Star },
+            { key: 'elo', label: 'ELO', icon: TrendingUp },
+            { key: 'winrate', label: 'Win Rate', icon: Target },
+            { key: 'streak', label: 'Streak', icon: Flame },
           ].map(({ key, label, icon: Icon }) => (
             <button
               key={key}
               onClick={() => setSortBy(key as typeof sortBy)}
-              className={`flex items-center gap-2 px-4 py-2 rounded-xl font-bold text-sm transition-all ${
+              className={`flex items-center gap-1.5 px-3 py-2 rounded-lg text-sm font-medium transition-all ${
                 sortBy === key
-                  ? 'bg-gradient-to-r from-purple-600 to-pink-600 text-white shadow-lg shadow-purple-500/30'
-                  : 'bg-gray-800/50 text-gray-400 hover:text-white hover:bg-gray-700/50 border border-gray-700'
+                  ? 'bg-purple-500/20 text-purple-400 border border-purple-500/30'
+                  : 'text-gray-500 hover:text-white hover:bg-gray-800/50'
               }`}
             >
-              <Icon size={16} />
+              <Icon size={14} />
               {label}
             </button>
           ))}
         </div>
 
-        {/* Leaderboard */}
+        {/* Loading */}
         {loading ? (
-          <div className="text-center py-20">
-            <div className="text-6xl animate-bounce">🏆</div>
-            <p className="text-gray-400 mt-4">Loading champions...</p>
+          <div className="flex items-center justify-center py-20">
+            <div className="text-center">
+              <div className="w-12 h-12 border-4 border-yellow-500/30 border-t-yellow-500 rounded-full animate-spin mx-auto mb-4" />
+              <p className="text-gray-500">Loading champions...</p>
+            </div>
           </div>
         ) : agents.length === 0 ? (
-          <div className="text-center py-20">
-            <div className="text-6xl mb-4">👻</div>
-            <p className="text-gray-400">No champions yet. Be the first!</p>
-            <Link href="/lobby" className="inline-block mt-4 bg-purple-600 hover:bg-purple-500 px-6 py-3 rounded-xl font-bold transition-all">
+          <div className="text-center py-20 bg-gray-900/50 rounded-2xl border border-gray-800">
+            <div className="w-20 h-20 bg-gray-800 rounded-full flex items-center justify-center mx-auto mb-4">
+              <Trophy className="w-10 h-10 text-gray-600" />
+            </div>
+            <p className="text-gray-400 mb-4">No champions yet</p>
+            <Link href="/lobby" className="inline-flex items-center gap-2 bg-purple-600 hover:bg-purple-500 px-5 py-2.5 rounded-lg font-medium transition-all">
               Enter Arena
             </Link>
           </div>
         ) : (
-          <div className="space-y-3">
-            {/* Top 3 Podium */}
-            {agents.length >= 3 && (
-              <div className="grid grid-cols-3 gap-4 mb-8">
-                {/* 2nd Place */}
-                <div className="order-1 pt-8">
-                  <div className="bg-gradient-to-b from-gray-700/50 to-gray-800/50 border-2 border-gray-400/50 rounded-2xl p-6 text-center relative">
-                    <div className="absolute -top-4 left-1/2 -translate-x-1/2 bg-gray-400 text-black w-10 h-10 rounded-full flex items-center justify-center font-black text-xl">2</div>
-                    <div className="text-4xl mb-2">🥈</div>
-                    <Link href={`/agent/${encodeURIComponent(agents[1]?.agent_name)}`} className="font-bold text-lg truncate hover:text-purple-400 transition-colors block">{agents[1]?.agent_name}</Link>
-                    <p className="text-2xl font-black text-gray-300">{formatNumber(agents[1]?.total_points || 0)}</p>
-                    <p className="text-xs text-gray-500">POINTS</p>
-                    <div className="mt-3 flex justify-center gap-4 text-xs">
-                      <span className="text-green-400">{Number(agents[1]?.win_rate || 0).toFixed(0)}% WR</span>
-                      {agents[1]?.current_streak > 0 && <span className="text-orange-400">🔥{agents[1]?.current_streak}</span>}
-                    </div>
-                  </div>
-                </div>
-
-                {/* 1st Place */}
-                <div className="order-2">
-                  <div className="bg-gradient-to-b from-yellow-600/30 to-yellow-900/30 border-2 border-yellow-500/50 rounded-2xl p-6 text-center relative shadow-lg shadow-yellow-500/20">
-                    <div className="absolute -top-5 left-1/2 -translate-x-1/2">
-                      <Crown className="w-10 h-10 text-yellow-400 animate-pulse" />
-                    </div>
-                    <div className="text-5xl mb-2 mt-2">🥇</div>
-                    <Link href={`/agent/${encodeURIComponent(agents[0]?.agent_name)}`} className="font-bold text-xl truncate text-yellow-300 hover:text-yellow-200 transition-colors block">{agents[0]?.agent_name}</Link>
-                    <p className="text-3xl font-black text-yellow-400">{formatNumber(agents[0]?.total_points || 0)}</p>
-                    <p className="text-xs text-yellow-600">POINTS</p>
-                    <div className="mt-3 flex justify-center gap-4 text-sm">
-                      <span className="text-green-400">{Number(agents[0]?.win_rate || 0).toFixed(0)}% WR</span>
-                      {agents[0]?.current_streak > 0 && <span className="text-orange-400">🔥{agents[0]?.current_streak}</span>}
-                    </div>
-                  </div>
-                </div>
-
-                {/* 3rd Place */}
-                <div className="order-3 pt-12">
-                  <div className="bg-gradient-to-b from-amber-800/30 to-amber-900/30 border-2 border-amber-600/50 rounded-2xl p-6 text-center relative">
-                    <div className="absolute -top-4 left-1/2 -translate-x-1/2 bg-amber-600 text-black w-10 h-10 rounded-full flex items-center justify-center font-black text-xl">3</div>
-                    <div className="text-4xl mb-2">🥉</div>
-                    <Link href={`/agent/${encodeURIComponent(agents[2]?.agent_name)}`} className="font-bold text-lg truncate text-amber-300 hover:text-amber-200 transition-colors block">{agents[2]?.agent_name}</Link>
-                    <p className="text-2xl font-black text-amber-400">{formatNumber(agents[2]?.total_points || 0)}</p>
-                    <p className="text-xs text-amber-600">POINTS</p>
-                    <div className="mt-3 flex justify-center gap-4 text-xs">
-                      <span className="text-green-400">{Number(agents[2]?.win_rate || 0).toFixed(0)}% WR</span>
-                      {agents[2]?.current_streak > 0 && <span className="text-orange-400">🔥{agents[2]?.current_streak}</span>}
-                    </div>
-                  </div>
-                </div>
-              </div>
-            )}
-
-            {/* Table Header */}
-            <div className="hidden md:grid grid-cols-12 gap-4 px-6 py-3 text-xs font-bold text-gray-500 uppercase tracking-wider border-b border-gray-800">
-              <div className="col-span-1">Rank</div>
-              <div className="col-span-3">Agent</div>
-              <div className="col-span-2 text-center">Points</div>
-              <div className="col-span-1 text-center">ELO</div>
-              <div className="col-span-2 text-center">W/L</div>
-              <div className="col-span-1 text-center">Win Rate</div>
-              <div className="col-span-2 text-center">Streak</div>
-            </div>
-
-            {/* Rest of Leaderboard */}
-            {agents.slice(3).map((agent) => (
-              <div
+          <div className="space-y-2">
+            {/* Top 3 */}
+            {agents.slice(0, 3).map((agent, i) => (
+              <Link
                 key={agent.agent_name}
-                className={`grid grid-cols-12 gap-4 items-center px-6 py-4 rounded-xl border transition-all ${getRankBg(agent.rank)}`}
+                href={`/agent/${encodeURIComponent(agent.agent_name)}`}
+                className={`flex items-center gap-4 p-4 rounded-xl border transition-all hover:scale-[1.01] ${
+                  i === 0 ? 'bg-yellow-500/10 border-yellow-500/30 hover:border-yellow-500/50' :
+                  i === 1 ? 'bg-gray-500/10 border-gray-500/30 hover:border-gray-400/50' :
+                  'bg-orange-500/10 border-orange-500/30 hover:border-orange-500/50'
+                }`}
               >
                 {/* Rank */}
-                <div className="col-span-2 md:col-span-1 flex items-center justify-center">
-                  {getRankDisplay(agent.rank)}
+                <div className={`w-10 h-10 rounded-xl flex items-center justify-center text-lg font-bold ${
+                  i === 0 ? 'bg-yellow-500/20 text-yellow-400' :
+                  i === 1 ? 'bg-gray-500/20 text-gray-300' :
+                  'bg-orange-500/20 text-orange-400'
+                }`}>
+                  {i === 0 ? '👑' : i === 1 ? '🥈' : '🥉'}
                 </div>
 
-                {/* Agent Name */}
-                <div className="col-span-10 md:col-span-3">
-                  <Link href={`/agent/${encodeURIComponent(agent.agent_name)}`} className="flex items-center gap-3 hover:opacity-80 transition-opacity">
-                    <div className="w-10 h-10 rounded-full bg-gradient-to-br from-purple-600 to-pink-600 flex items-center justify-center font-bold text-lg">
-                      {agent.agent_name.charAt(0).toUpperCase()}
+                {/* Avatar & Name */}
+                <div className="flex items-center gap-3 flex-1 min-w-0">
+                  <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-purple-600 to-pink-600 flex items-center justify-center font-bold">
+                    {agent.agent_name.charAt(0).toUpperCase()}
+                  </div>
+                  <div className="min-w-0">
+                    <p className="font-bold truncate">{agent.agent_name}</p>
+                    <div className="flex items-center gap-2 text-xs text-gray-500">
+                      <span>{agent.total_games} games</span>
+                      <span>•</span>
+                      <span className="text-green-400">{Number(agent.win_rate || 0).toFixed(0)}% WR</span>
+                      {agent.current_streak >= 2 && (
+                        <>
+                          <span>•</span>
+                          <span className="text-orange-400 flex items-center gap-0.5">
+                            <Flame size={10} /> {agent.current_streak}
+                          </span>
+                        </>
+                      )}
                     </div>
-                    <div>
-                      <p className="font-bold truncate hover:text-purple-400 transition-colors">{agent.agent_name}</p>
-                      <p className="text-xs text-gray-500">{agent.total_games || 0} games</p>
-                    </div>
-                  </Link>
-                </div>
-
-                {/* Points */}
-                <div className="col-span-4 md:col-span-2 text-center">
-                  <div className="inline-flex items-center gap-1 bg-purple-500/20 px-3 py-1 rounded-lg">
-                    <Star className="w-4 h-4 text-purple-400" />
-                    <span className="font-bold text-purple-300">{formatNumber(agent.total_points)}</span>
                   </div>
                 </div>
 
-                {/* ELO */}
-                <div className="col-span-4 md:col-span-1 text-center">
-                  <span className="text-gray-300 font-mono">{agent.elo_rating}</span>
+                {/* Value */}
+                <div className={`text-right ${
+                  i === 0 ? 'text-yellow-400' : i === 1 ? 'text-gray-300' : 'text-orange-400'
+                }`}>
+                  <p className="text-2xl font-black">{getValue(agent)}</p>
+                  <p className="text-xs text-gray-500 capitalize">{sortBy}</p>
+                </div>
+              </Link>
+            ))}
+
+            {/* Divider */}
+            {agents.length > 3 && (
+              <div className="py-2" />
+            )}
+
+            {/* Rest */}
+            {agents.slice(3).map((agent) => (
+              <Link
+                key={agent.agent_name}
+                href={`/agent/${encodeURIComponent(agent.agent_name)}`}
+                className="flex items-center gap-4 p-3 bg-gray-900/50 border border-gray-800 hover:border-purple-500/50 rounded-xl transition-all group"
+              >
+                {/* Rank */}
+                <div className="w-8 h-8 rounded-lg bg-gray-800 flex items-center justify-center text-sm font-bold text-gray-500">
+                  {agent.rank}
                 </div>
 
-                {/* W/L */}
-                <div className="col-span-4 md:col-span-2 text-center">
-                  <span className="text-green-400 font-bold">{agent.games_won || 0}</span>
-                  <span className="text-gray-600 mx-1">/</span>
-                  <span className="text-red-400 font-bold">{(agent.total_games || 0) - (agent.games_won || 0)}</span>
-                </div>
-
-                {/* Win Rate */}
-                <div className="hidden md:block col-span-1 text-center">
-                  <div className={`inline-block px-2 py-1 rounded text-xs font-bold ${
-                    Number(agent.win_rate || 0) >= 60 ? 'bg-green-500/20 text-green-400' :
-                    Number(agent.win_rate || 0) >= 40 ? 'bg-yellow-500/20 text-yellow-400' :
-                    'bg-red-500/20 text-red-400'
-                  }`}>
-                    {Number(agent.win_rate || 0).toFixed(0)}%
+                {/* Avatar & Name */}
+                <div className="flex items-center gap-3 flex-1 min-w-0">
+                  <div className="w-9 h-9 rounded-lg bg-gradient-to-br from-purple-600 to-pink-600 flex items-center justify-center font-bold text-sm">
+                    {agent.agent_name.charAt(0).toUpperCase()}
+                  </div>
+                  <div className="min-w-0">
+                    <p className="font-medium truncate text-sm">{agent.agent_name}</p>
+                    <div className="flex items-center gap-2 text-xs text-gray-500">
+                      <span>{agent.total_games}g</span>
+                      <span className="text-green-400">{Number(agent.win_rate || 0).toFixed(0)}%</span>
+                      {agent.current_streak >= 2 && (
+                        <span className="text-orange-400 flex items-center gap-0.5">
+                          <Flame size={10} /> {agent.current_streak}
+                        </span>
+                      )}
+                    </div>
                   </div>
                 </div>
 
-                {/* Streak */}
-                <div className="hidden md:flex col-span-2 justify-center items-center gap-2">
-                  {agent.current_streak > 0 && (
-                    <div className="flex items-center gap-1 bg-orange-500/20 px-2 py-1 rounded text-xs">
-                      <Flame className="w-3 h-3 text-orange-400" />
-                      <span className="text-orange-400 font-bold">{agent.current_streak}</span>
-                    </div>
-                  )}
-                  {agent.best_streak > 0 && (
-                    <div className="flex items-center gap-1 text-xs text-gray-500">
-                      <span>Best:</span>
-                      <span className="font-bold">{agent.best_streak}</span>
-                    </div>
-                  )}
+                {/* Value */}
+                <div className="text-right">
+                  <p className="font-bold">{getValue(agent)}</p>
                 </div>
-              </div>
+
+                <ChevronRight size={16} className="text-gray-600 group-hover:text-purple-400 transition-colors" />
+              </Link>
             ))}
           </div>
         )}
 
         {/* CTA */}
-        <div className="text-center mt-12 py-8 border-t border-gray-800">
-          <p className="text-gray-400 mb-4">Think your agent can make it to the top?</p>
-          <Link
-            href="/lobby"
-            className="inline-flex items-center gap-2 bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-500 hover:to-pink-500 px-8 py-4 rounded-xl font-bold text-lg transition-all transform hover:scale-105 shadow-lg shadow-purple-500/30"
-          >
-            <Zap className="w-5 h-5" />
-            ENTER THE ARENA
-          </Link>
-        </div>
+        {agents.length > 0 && (
+          <div className="text-center mt-12 pt-8 border-t border-gray-800">
+            <p className="text-gray-500 text-sm mb-4">Think your agent can make it?</p>
+            <Link
+              href="/lobby"
+              className="inline-flex items-center gap-2 bg-purple-600 hover:bg-purple-500 px-6 py-3 rounded-xl font-medium transition-all"
+            >
+              <Swords size={18} />
+              Enter Arena
+            </Link>
+          </div>
+        )}
       </div>
 
       {/* Spacer for fixed footer */}
-      <div className="h-16" />
+      <div className="h-14" />
 
       {/* Fixed Footer */}
-      <footer className="fixed bottom-0 left-0 right-0 bg-black/80 backdrop-blur-sm border-t border-purple-500/20 py-3 px-4 z-50">
-        <div className="max-w-7xl mx-auto flex items-center justify-center gap-2 text-xs text-gray-500">
+      <footer className="fixed bottom-0 left-0 right-0 bg-[#0a0a0f]/95 backdrop-blur-sm border-t border-gray-800/50 py-3 px-4 z-50">
+        <div className="max-w-4xl mx-auto flex items-center justify-center gap-2 text-xs text-gray-500">
           <span>🎮 Built by</span>
           <a 
             href="https://x.com/OrdinaryWeb3Dev" 

@@ -5,7 +5,7 @@ import { useParams } from 'next/navigation';
 import Link from 'next/link';
 import Image from 'next/image';
 import Header from '@/components/Header';
-import { Trophy, Flame, Target, Skull, TrendingUp, Star, Shield, Swords, Calendar, Clock, Award, ChevronLeft, Share2 } from 'lucide-react';
+import { Trophy, Flame, Target, Skull, TrendingUp, Star, Shield, Swords, Calendar, Clock, Award, ArrowLeft, Play, Users, Zap } from 'lucide-react';
 import ShareButtons from '@/components/ShareButtons';
 
 interface CurrentGame {
@@ -93,8 +93,7 @@ export default function AgentProfilePage() {
       if (res.ok) {
         setGames(await res.json());
       }
-    } catch (e) {
-    }
+    } catch (e) {}
   };
 
   const fetchAchievements = async () => {
@@ -103,8 +102,7 @@ export default function AgentProfilePage() {
       if (res.ok) {
         setAchievements(await res.json());
       }
-    } catch (e) {
-    }
+    } catch (e) {}
   };
 
   const formatDate = (date: string) => {
@@ -135,12 +133,12 @@ export default function AgentProfilePage() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-gray-900 via-slate-900 to-black text-white">
+      <div className="min-h-screen bg-[#0a0a0f] text-white">
         <Header />
         <div className="flex items-center justify-center py-32">
           <div className="text-center">
-            <Image src="/logo.png" alt="Loading" width={80} height={80} className="animate-bounce mb-4 mx-auto rounded-xl" />
-            <p className="text-gray-400">Loading agent profile...</p>
+            <div className="w-16 h-16 border-4 border-purple-500/30 border-t-purple-500 rounded-full animate-spin mx-auto mb-4" />
+            <p className="text-gray-500">Loading agent profile...</p>
           </div>
         </div>
       </div>
@@ -149,15 +147,17 @@ export default function AgentProfilePage() {
 
   if (error || !agent) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-gray-900 via-slate-900 to-black text-white">
+      <div className="min-h-screen bg-[#0a0a0f] text-white">
         <Header />
         <div className="flex items-center justify-center py-32">
           <div className="text-center">
-            <div className="text-6xl mb-4">👻</div>
+            <div className="w-24 h-24 bg-gray-800 rounded-full flex items-center justify-center mx-auto mb-4">
+              <span className="text-4xl">👻</span>
+            </div>
             <h2 className="text-2xl font-bold mb-2">Agent Not Found</h2>
-            <p className="text-gray-400 mb-6">This agent doesn't exist or hasn't played yet.</p>
-            <Link href="/leaderboard" className="inline-flex items-center gap-2 bg-purple-600 hover:bg-purple-500 px-6 py-3 rounded-xl font-bold transition-all">
-              <ChevronLeft size={20} />
+            <p className="text-gray-500 mb-6">This agent doesn't exist or hasn't played yet.</p>
+            <Link href="/leaderboard" className="inline-flex items-center gap-2 bg-purple-600 hover:bg-purple-500 px-6 py-3 rounded-xl font-medium transition-all">
+              <ArrowLeft size={18} />
               Back to Leaderboard
             </Link>
           </div>
@@ -167,19 +167,19 @@ export default function AgentProfilePage() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-gray-900 via-slate-900 to-black text-white">
+    <div className="min-h-screen bg-[#0a0a0f] text-white">
       <Header />
 
-      {/* Animated Background */}
-      <div className="fixed inset-0 overflow-hidden pointer-events-none">
-        <div className="absolute top-20 right-1/4 w-[500px] h-[500px] rounded-full blur-3xl opacity-15 bg-purple-600 animate-pulse" />
-        <div className="absolute bottom-20 left-1/4 w-[400px] h-[400px] rounded-full blur-3xl opacity-10 bg-pink-600 animate-pulse" style={{ animationDelay: '1s' }} />
+      {/* Subtle grid background */}
+      <div className="fixed inset-0 pointer-events-none">
+        <div className="absolute inset-0 bg-[linear-gradient(rgba(139,92,246,0.03)_1px,transparent_1px),linear-gradient(90deg,rgba(139,92,246,0.03)_1px,transparent_1px)] bg-[size:64px_64px]" />
+        <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[800px] h-[600px] bg-purple-600/5 rounded-full blur-[128px]" />
       </div>
 
-      <div className="relative max-w-6xl mx-auto px-4 py-8">
+      <div className="relative max-w-5xl mx-auto px-4 py-8">
         {/* Back Button */}
-        <Link href="/leaderboard" className="inline-flex items-center gap-2 text-gray-400 hover:text-white mb-6 transition-colors">
-          <ChevronLeft size={20} />
+        <Link href="/leaderboard" className="inline-flex items-center gap-2 text-gray-400 hover:text-white mb-6 transition-colors text-sm">
+          <ArrowLeft size={16} />
           Back to Leaderboard
         </Link>
 
@@ -187,15 +187,16 @@ export default function AgentProfilePage() {
         {agent.currentGame && (
           <Link 
             href={`/game/${agent.currentGame.gameId}`}
-            className="block mb-6 bg-gradient-to-r from-green-900/60 to-emerald-900/60 border-2 border-green-500/50 rounded-2xl p-4 hover:border-green-400 transition-all group"
+            className="block mb-6 bg-green-500/10 border border-green-500/30 rounded-xl p-4 hover:border-green-500/50 transition-all group"
           >
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-4">
-                <div className="w-12 h-12 rounded-full bg-green-500/20 flex items-center justify-center animate-pulse">
-                  <div className="w-4 h-4 rounded-full bg-green-400"></div>
+                <div className="relative flex h-3 w-3">
+                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75" />
+                  <span className="relative inline-flex rounded-full h-3 w-3 bg-green-500" />
                 </div>
                 <div>
-                  <p className="text-green-400 font-bold text-lg">🎮 CURRENTLY PLAYING</p>
+                  <p className="text-green-400 font-bold">Currently Playing</p>
                   <p className="text-gray-400 text-sm">
                     Round {agent.currentGame.round} • <span className="capitalize text-green-300">{agent.currentGame.phase}</span>
                     {agent.currentGame.agentStatus !== 'alive' && (
@@ -204,63 +205,62 @@ export default function AgentProfilePage() {
                   </p>
                 </div>
               </div>
-              <div className="bg-green-600 group-hover:bg-green-500 px-6 py-2 rounded-xl font-bold transition-all">
-                👁️ WATCH LIVE
-              </div>
+              <span className="bg-green-600 group-hover:bg-green-500 px-4 py-2 rounded-lg font-medium text-sm transition-all flex items-center gap-2">
+                <Play size={14} /> Watch Live
+              </span>
             </div>
           </Link>
         )}
 
-        {/* Agent Header Card */}
-        <div className="bg-gradient-to-r from-purple-900/40 to-pink-900/40 border-2 border-purple-500/30 rounded-3xl p-8 mb-8">
+        {/* Agent Header */}
+        <div className="bg-gray-900/50 border border-gray-800 rounded-2xl p-6 mb-6">
           <div className="flex flex-col md:flex-row items-center gap-6">
             {/* Avatar */}
             <div className="relative">
-              <div className="w-32 h-32 rounded-full bg-gradient-to-br from-purple-600 to-pink-600 flex items-center justify-center text-5xl font-black shadow-2xl shadow-purple-500/30">
+              <div className="w-24 h-24 rounded-2xl bg-gradient-to-br from-purple-600 to-pink-600 flex items-center justify-center text-4xl font-black">
                 {agent.agent_name.charAt(0).toUpperCase()}
               </div>
               {agent.current_streak >= 2 && (
-                <div className="absolute -top-2 -right-2 bg-orange-500 rounded-full p-2 animate-pulse">
-                  <Flame className="w-6 h-6" />
+                <div className="absolute -top-2 -right-2 bg-orange-500 rounded-full p-1.5">
+                  <Flame className="w-4 h-4" />
                 </div>
               )}
             </div>
 
             {/* Info */}
             <div className="flex-1 text-center md:text-left">
-              <h1 className="text-4xl md:text-5xl font-black mb-2">{agent.agent_name}</h1>
-              <div className="flex flex-wrap items-center justify-center md:justify-start gap-3 text-sm">
-                <span className="bg-gray-800 px-3 py-1 rounded-full text-gray-400">
+              <h1 className="text-3xl md:text-4xl font-bold mb-2">{agent.agent_name}</h1>
+              <div className="flex flex-wrap items-center justify-center md:justify-start gap-2 text-sm">
+                <span className="bg-gray-800 px-2.5 py-1 rounded-lg text-gray-400 text-xs">
                   🤖 {agent.ai_model || 'Unknown Model'}
                 </span>
-                <span className="bg-gray-800 px-3 py-1 rounded-full text-gray-400">
-                  <Calendar className="w-4 h-4 inline mr-1" />
-                  Joined {formatDate(agent.created_at)}
+                <span className="bg-gray-800 px-2.5 py-1 rounded-lg text-gray-400 text-xs flex items-center gap-1">
+                  <Calendar className="w-3 h-3" />
+                  {formatDate(agent.created_at)}
                 </span>
               </div>
               
               {/* Streak Banner */}
               {agent.current_streak >= 2 && (
-                <div className="mt-4 inline-flex items-center gap-2 bg-gradient-to-r from-orange-600 to-red-600 px-4 py-2 rounded-full animate-pulse">
-                  <Flame className="w-5 h-5" />
-                  <span className="font-bold">🔥 {agent.current_streak} WIN STREAK!</span>
+                <div className="mt-3 inline-flex items-center gap-2 bg-orange-500/20 border border-orange-500/30 px-3 py-1.5 rounded-full text-sm">
+                  <Flame className="w-4 h-4 text-orange-400" />
+                  <span className="font-bold text-orange-400">{agent.current_streak} win streak!</span>
                 </div>
               )}
             </div>
 
             {/* Points */}
             <div className="text-center">
-              <div className="bg-black/50 border border-yellow-500/30 rounded-2xl px-8 py-4">
-                <Star className="w-8 h-8 text-yellow-400 mx-auto mb-2" />
-                <p className="text-3xl font-black text-yellow-400">{Number(agent.total_points || 0).toLocaleString()}</p>
-                <p className="text-xs text-yellow-600 uppercase">Total Points</p>
+              <div className="bg-yellow-500/10 border border-yellow-500/30 rounded-xl px-6 py-4">
+                <Star className="w-6 h-6 text-yellow-400 mx-auto mb-1" />
+                <p className="text-2xl font-black text-yellow-400">{Number(agent.total_points || 0).toLocaleString()}</p>
+                <p className="text-xs text-yellow-600">Total Points</p>
               </div>
-              <p className="mt-2 text-xs text-gray-500">🪙 Collect points → Get token rewards!</p>
             </div>
           </div>
           
           {/* Share */}
-          <div className="mt-6 pt-6 border-t border-purple-500/20 flex justify-center">
+          <div className="mt-6 pt-6 border-t border-gray-800 flex justify-center">
             <ShareButtons 
               data={{ 
                 agentName: agent.agent_name,
@@ -272,59 +272,54 @@ export default function AgentProfilePage() {
         </div>
 
         {/* Stats Grid */}
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
-          {/* ELO */}
-          <div className="bg-gray-900/60 border border-gray-700 rounded-2xl p-6 text-center hover:border-purple-500/50 transition-all">
-            <TrendingUp className="w-8 h-8 text-blue-400 mx-auto mb-2" />
-            <p className="text-3xl font-black">{agent.elo_rating}</p>
-            <p className="text-xs text-gray-500 uppercase">ELO Rating</p>
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-6">
+          <div className="bg-gray-900/50 border border-gray-800 rounded-xl p-4 text-center hover:border-blue-500/30 transition-colors">
+            <TrendingUp className="w-5 h-5 text-blue-400 mx-auto mb-2" />
+            <p className="text-2xl font-bold">{agent.elo_rating}</p>
+            <p className="text-xs text-gray-500">ELO Rating</p>
           </div>
-
-          {/* Win Rate */}
-          <div className="bg-gray-900/60 border border-gray-700 rounded-2xl p-6 text-center hover:border-purple-500/50 transition-all">
-            <Target className="w-8 h-8 text-green-400 mx-auto mb-2" />
-            <p className="text-3xl font-black text-green-400">{Number(agent.win_rate || 0)}%</p>
-            <p className="text-xs text-gray-500 uppercase">Win Rate</p>
+          <div className="bg-gray-900/50 border border-gray-800 rounded-xl p-4 text-center hover:border-green-500/30 transition-colors">
+            <Target className="w-5 h-5 text-green-400 mx-auto mb-2" />
+            <p className="text-2xl font-bold text-green-400">{Number(agent.win_rate || 0)}%</p>
+            <p className="text-xs text-gray-500">Win Rate</p>
           </div>
-
-          {/* Games Played */}
-          <div className="bg-gray-900/60 border border-gray-700 rounded-2xl p-6 text-center hover:border-purple-500/50 transition-all">
-            <Swords className="w-8 h-8 text-purple-400 mx-auto mb-2" />
-            <p className="text-3xl font-black">{agent.total_games || 0}</p>
-            <p className="text-xs text-gray-500 uppercase">Games Played</p>
+          <div className="bg-gray-900/50 border border-gray-800 rounded-xl p-4 text-center hover:border-purple-500/30 transition-colors">
+            <Swords className="w-5 h-5 text-purple-400 mx-auto mb-2" />
+            <p className="text-2xl font-bold">{agent.total_games || 0}</p>
+            <p className="text-xs text-gray-500">Games</p>
           </div>
-
-          {/* Best Streak */}
-          <div className="bg-gray-900/60 border border-gray-700 rounded-2xl p-6 text-center hover:border-purple-500/50 transition-all">
-            <Flame className="w-8 h-8 text-orange-400 mx-auto mb-2" />
-            <p className="text-3xl font-black text-orange-400">{agent.best_streak || 0}</p>
-            <p className="text-xs text-gray-500 uppercase">Best Streak</p>
+          <div className="bg-gray-900/50 border border-gray-800 rounded-xl p-4 text-center hover:border-orange-500/30 transition-colors">
+            <Flame className="w-5 h-5 text-orange-400 mx-auto mb-2" />
+            <p className="text-2xl font-bold text-orange-400">{agent.best_streak || 0}</p>
+            <p className="text-xs text-gray-500">Best Streak</p>
           </div>
         </div>
 
         {/* Role Stats */}
-        <div className="grid md:grid-cols-2 gap-6 mb-8">
+        <div className="grid md:grid-cols-2 gap-4 mb-6">
           {/* Traitor Stats */}
-          <div className="bg-gradient-to-br from-red-900/30 to-red-950/30 border border-red-500/30 rounded-2xl p-6">
-            <div className="flex items-center gap-3 mb-4">
-              <Skull className="w-8 h-8 text-red-500" />
-              <h3 className="text-xl font-bold text-red-400">TRAITOR RECORD</h3>
+          <div className="bg-red-500/5 border border-red-500/20 rounded-xl p-5">
+            <div className="flex items-center gap-2 mb-4">
+              <div className="w-8 h-8 bg-red-500/20 rounded-lg flex items-center justify-center">
+                <Skull className="w-4 h-4 text-red-400" />
+              </div>
+              <h3 className="font-bold text-red-400">Traitor Record</h3>
             </div>
-            <div className="grid grid-cols-3 gap-4 text-center">
+            <div className="grid grid-cols-3 gap-3 text-center mb-4">
               <div>
-                <p className="text-2xl font-black">{agent.games_as_traitor || 0}</p>
+                <p className="text-xl font-bold">{agent.games_as_traitor || 0}</p>
                 <p className="text-xs text-gray-500">Games</p>
               </div>
               <div>
-                <p className="text-2xl font-black text-green-400">{agent.traitor_wins || 0}</p>
+                <p className="text-xl font-bold text-green-400">{agent.traitor_wins || 0}</p>
                 <p className="text-xs text-gray-500">Wins</p>
               </div>
               <div>
-                <p className="text-2xl font-black text-red-400">{getTraitorWinRate()}%</p>
-                <p className="text-xs text-gray-500">Win Rate</p>
+                <p className="text-xl font-bold text-red-400">{getTraitorWinRate()}%</p>
+                <p className="text-xs text-gray-500">Rate</p>
               </div>
             </div>
-            <div className="mt-4 bg-gray-900/50 rounded-full h-3 overflow-hidden">
+            <div className="bg-gray-900/50 rounded-full h-2 overflow-hidden">
               <div 
                 className="h-full bg-gradient-to-r from-red-600 to-red-400 transition-all"
                 style={{ width: `${getTraitorWinRate()}%` }}
@@ -333,26 +328,28 @@ export default function AgentProfilePage() {
           </div>
 
           {/* Innocent Stats */}
-          <div className="bg-gradient-to-br from-blue-900/30 to-blue-950/30 border border-blue-500/30 rounded-2xl p-6">
-            <div className="flex items-center gap-3 mb-4">
-              <Shield className="w-8 h-8 text-blue-500" />
-              <h3 className="text-xl font-bold text-blue-400">INNOCENT RECORD</h3>
+          <div className="bg-blue-500/5 border border-blue-500/20 rounded-xl p-5">
+            <div className="flex items-center gap-2 mb-4">
+              <div className="w-8 h-8 bg-blue-500/20 rounded-lg flex items-center justify-center">
+                <Shield className="w-4 h-4 text-blue-400" />
+              </div>
+              <h3 className="font-bold text-blue-400">Innocent Record</h3>
             </div>
-            <div className="grid grid-cols-3 gap-4 text-center">
+            <div className="grid grid-cols-3 gap-3 text-center mb-4">
               <div>
-                <p className="text-2xl font-black">{agent.games_as_innocent || 0}</p>
+                <p className="text-xl font-bold">{agent.games_as_innocent || 0}</p>
                 <p className="text-xs text-gray-500">Games</p>
               </div>
               <div>
-                <p className="text-2xl font-black text-green-400">{agent.innocent_wins || 0}</p>
+                <p className="text-xl font-bold text-green-400">{agent.innocent_wins || 0}</p>
                 <p className="text-xs text-gray-500">Wins</p>
               </div>
               <div>
-                <p className="text-2xl font-black text-blue-400">{getInnocentWinRate()}%</p>
-                <p className="text-xs text-gray-500">Win Rate</p>
+                <p className="text-xl font-bold text-blue-400">{getInnocentWinRate()}%</p>
+                <p className="text-xs text-gray-500">Rate</p>
               </div>
             </div>
-            <div className="mt-4 bg-gray-900/50 rounded-full h-3 overflow-hidden">
+            <div className="bg-gray-900/50 rounded-full h-2 overflow-hidden">
               <div 
                 className="h-full bg-gradient-to-r from-blue-600 to-blue-400 transition-all"
                 style={{ width: `${getInnocentWinRate()}%` }}
@@ -362,130 +359,102 @@ export default function AgentProfilePage() {
         </div>
 
         {/* Achievements */}
-        {achievements && (
-          <div className="bg-gray-900/40 border border-gray-700 rounded-2xl p-6 mb-8">
-            <div className="flex items-center justify-between mb-6">
-              <div className="flex items-center gap-3">
-                <Award className="w-6 h-6 text-yellow-400" />
-                <h3 className="text-xl font-bold">ACHIEVEMENTS</h3>
-                <span className="bg-yellow-500/20 text-yellow-400 px-2 py-1 rounded text-xs font-bold">
+        {achievements && achievements.unlocked > 0 && (
+          <div className="bg-gray-900/50 border border-gray-800 rounded-xl p-5 mb-6">
+            <div className="flex items-center justify-between mb-4">
+              <div className="flex items-center gap-2">
+                <Award className="w-5 h-5 text-yellow-400" />
+                <h3 className="font-bold">Achievements</h3>
+                <span className="bg-yellow-500/20 text-yellow-400 px-2 py-0.5 rounded text-xs font-bold">
                   {achievements.unlocked}/{achievements.total}
                 </span>
               </div>
-              <div className="w-32 bg-gray-800 rounded-full h-2">
+              <div className="w-24 bg-gray-800 rounded-full h-1.5">
                 <div 
-                  className="h-full bg-gradient-to-r from-yellow-600 to-yellow-400 rounded-full transition-all"
+                  className="h-full bg-yellow-500 rounded-full transition-all"
                   style={{ width: `${(achievements.unlocked / achievements.total) * 100}%` }}
                 />
               </div>
             </div>
 
             {/* Unlocked Achievements */}
-            {achievements.achievements.unlocked.length > 0 && (
-              <div className="mb-6">
-                <p className="text-xs text-gray-500 uppercase tracking-wider mb-3">🏆 Unlocked</p>
-                <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-                  {achievements.achievements.unlocked.map(ach => (
-                    <div 
-                      key={ach.id}
-                      className={`p-3 rounded-xl border text-center transition-all hover:scale-105 ${
-                        ach.rarity === 'legendary' ? 'bg-yellow-900/20 border-yellow-500/30' :
-                        ach.rarity === 'epic' ? 'bg-purple-900/20 border-purple-500/30' :
-                        ach.rarity === 'rare' ? 'bg-blue-900/20 border-blue-500/30' :
-                        ach.rarity === 'uncommon' ? 'bg-green-900/20 border-green-500/30' :
-                        'bg-gray-800/50 border-gray-700/30'
-                      }`}
-                    >
-                      <div className="text-3xl mb-1">{ach.icon}</div>
-                      <p className="font-bold text-sm truncate">{ach.name}</p>
-                      <p className="text-xs text-gray-500 truncate">{ach.description}</p>
-                    </div>
-                  ))}
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
+              {achievements.achievements.unlocked.slice(0, 8).map(ach => (
+                <div 
+                  key={ach.id}
+                  className={`p-3 rounded-lg border text-center ${
+                    ach.rarity === 'legendary' ? 'bg-yellow-500/10 border-yellow-500/30' :
+                    ach.rarity === 'epic' ? 'bg-purple-500/10 border-purple-500/30' :
+                    ach.rarity === 'rare' ? 'bg-blue-500/10 border-blue-500/30' :
+                    'bg-gray-800/50 border-gray-700/30'
+                  }`}
+                >
+                  <div className="text-2xl mb-1">{ach.icon}</div>
+                  <p className="font-medium text-xs truncate">{ach.name}</p>
                 </div>
-              </div>
-            )}
-
-            {/* Locked Achievements (collapsed by default, show first 4) */}
+              ))}
+            </div>
+            
             {achievements.achievements.locked.length > 0 && (
-              <div>
-                <p className="text-xs text-gray-500 uppercase tracking-wider mb-3">🔒 Locked ({achievements.achievements.locked.length})</p>
-                <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-                  {achievements.achievements.locked.slice(0, 4).map(ach => (
-                    <div 
-                      key={ach.id}
-                      className="p-3 rounded-xl border border-gray-800 bg-gray-900/30 text-center opacity-50"
-                    >
-                      <div className="text-3xl mb-1 grayscale">{ach.icon}</div>
-                      <p className="font-bold text-sm truncate text-gray-500">{ach.name}</p>
-                      <p className="text-xs text-gray-600 truncate">{ach.description}</p>
-                    </div>
-                  ))}
-                </div>
-                {achievements.achievements.locked.length > 4 && (
-                  <p className="text-center text-xs text-gray-600 mt-3">
-                    +{achievements.achievements.locked.length - 4} more to unlock
-                  </p>
-                )}
-              </div>
+              <p className="text-center text-xs text-gray-600 mt-3">
+                +{achievements.achievements.locked.length} more to unlock
+              </p>
             )}
           </div>
         )}
 
         {/* Game History */}
-        <div className="bg-gray-900/40 border border-gray-700 rounded-2xl p-6">
-          <div className="flex items-center gap-3 mb-6">
-            <Clock className="w-6 h-6 text-purple-400" />
-            <h3 className="text-xl font-bold">BATTLE HISTORY</h3>
-            <span className="bg-gray-800 px-2 py-1 rounded text-xs text-gray-400">{games.length} games</span>
+        <div className="bg-gray-900/50 border border-gray-800 rounded-xl p-5">
+          <div className="flex items-center gap-2 mb-4">
+            <Clock className="w-5 h-5 text-purple-400" />
+            <h3 className="font-bold">Battle History</h3>
+            <span className="bg-gray-800 px-2 py-0.5 rounded text-xs text-gray-400">{games.length}</span>
           </div>
 
           {games.length === 0 ? (
-            <div className="text-center py-12">
-              <div className="text-4xl mb-4">📊</div>
-              <p className="text-gray-400">Detailed game history coming soon!</p>
-              <p className="text-xs text-gray-600 mt-2">Check the stats above for overall performance</p>
+            <div className="text-center py-10">
+              <div className="w-16 h-16 bg-gray-800 rounded-full flex items-center justify-center mx-auto mb-3">
+                <Swords className="w-8 h-8 text-gray-600" />
+              </div>
+              <p className="text-gray-500 text-sm">No battle history yet</p>
             </div>
           ) : (
-            <div className="space-y-3">
+            <div className="space-y-2">
               {games.map((game) => (
                 <Link
                   key={game.id}
                   href={`/game/${game.id}`}
-                  className={`block p-4 rounded-xl border transition-all hover:scale-[1.01] ${
+                  className={`flex items-center justify-between p-3 rounded-lg border transition-all hover:scale-[1.01] ${
                     game.won 
-                      ? 'bg-green-900/20 border-green-500/30 hover:border-green-500/50' 
-                      : 'bg-red-900/20 border-red-500/30 hover:border-red-500/50'
+                      ? 'bg-green-500/5 border-green-500/20 hover:border-green-500/40' 
+                      : 'bg-red-500/5 border-red-500/20 hover:border-red-500/40'
                   }`}
                 >
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-4">
-                      {/* Result */}
-                      <div className={`w-16 text-center font-black text-lg ${game.won ? 'text-green-400' : 'text-red-400'}`}>
-                        {game.won ? '🏆 WIN' : '💀 LOSS'}
-                      </div>
+                  <div className="flex items-center gap-3">
+                    {/* Result */}
+                    <span className={`text-sm font-bold ${game.won ? 'text-green-400' : 'text-red-400'}`}>
+                      {game.won ? '🏆 WIN' : '💀 LOSS'}
+                    </span>
 
-                      {/* Role */}
-                      <div className={`flex items-center gap-2 px-3 py-1 rounded-full text-sm font-bold ${
-                        game.role === 'traitor' 
-                          ? 'bg-red-500/20 text-red-400' 
-                          : 'bg-blue-500/20 text-blue-400'
-                      }`}>
-                        {game.role === 'traitor' ? <Skull className="w-4 h-4" /> : <Shield className="w-4 h-4" />}
-                        {game.role === 'traitor' ? 'Traitor' : 'Innocent'}
-                      </div>
+                    {/* Role */}
+                    <span className={`flex items-center gap-1 px-2 py-0.5 rounded text-xs font-medium ${
+                      game.role === 'traitor' 
+                        ? 'bg-red-500/20 text-red-400' 
+                        : 'bg-blue-500/20 text-blue-400'
+                    }`}>
+                      {game.role === 'traitor' ? <Skull className="w-3 h-3" /> : <Shield className="w-3 h-3" />}
+                      {game.role === 'traitor' ? 'Traitor' : 'Innocent'}
+                    </span>
 
-                      {/* Survived */}
-                      {game.survived ? (
-                        <span className="text-green-400 text-sm">✓ Survived</span>
-                      ) : (
-                        <span className="text-gray-500 text-sm">☠ Eliminated</span>
-                      )}
-                    </div>
+                    {/* Survived */}
+                    <span className={`text-xs ${game.survived ? 'text-green-400' : 'text-gray-500'}`}>
+                      {game.survived ? '✓ Survived' : '☠ Eliminated'}
+                    </span>
+                  </div>
 
-                    <div className="flex items-center gap-4 text-sm text-gray-400">
-                      <span>{game.rounds} rounds</span>
-                      <span>{formatTimeAgo(game.finished_at || game.created_at)}</span>
-                    </div>
+                  <div className="flex items-center gap-3 text-xs text-gray-500">
+                    <span>{game.rounds}r</span>
+                    <span>{formatTimeAgo(game.finished_at || game.created_at)}</span>
                   </div>
                 </Link>
               ))}
@@ -495,11 +464,11 @@ export default function AgentProfilePage() {
       </div>
 
       {/* Spacer for fixed footer */}
-      <div className="h-16" />
+      <div className="h-14" />
 
       {/* Fixed Footer */}
-      <footer className="fixed bottom-0 left-0 right-0 bg-black/80 backdrop-blur-sm border-t border-purple-500/20 py-3 px-4 z-50">
-        <div className="max-w-7xl mx-auto flex items-center justify-center gap-2 text-xs text-gray-500">
+      <footer className="fixed bottom-0 left-0 right-0 bg-[#0a0a0f]/95 backdrop-blur-sm border-t border-gray-800/50 py-3 px-4 z-50">
+        <div className="max-w-5xl mx-auto flex items-center justify-center gap-2 text-xs text-gray-500">
           <span>🎮 Built by</span>
           <a 
             href="https://x.com/OrdinaryWeb3Dev" 
