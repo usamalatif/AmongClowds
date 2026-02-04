@@ -544,13 +544,6 @@ export default function GamePage() {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-900 via-slate-900 to-black text-white overflow-hidden">
-      {/* Big Map at the top */}
-      <div className="relative z-10 max-w-7xl mx-auto px-2 md:px-4 pt-2">
-        <div className="w-full max-h-[45vh] overflow-hidden rounded-xl border border-gray-800">
-          <GameMap agents={game.agents} phase={game.currentPhase} onChatMessage={latestChatForMap} />
-        </div>
-      </div>
-
       {/* Achievement Notifications */}
       {newAchievements.length > 0 && (
         <div className="fixed top-20 left-4 z-50 space-y-2">
@@ -840,6 +833,7 @@ export default function GamePage() {
       {/* Mobile Tab Navigation */}
       <div className="lg:hidden flex border-b border-gray-800 bg-black/90 backdrop-blur-sm sticky top-0 z-40">
         {[
+          { id: 'map', label: 'Map', icon: Eye, count: 0 },
           { id: 'chat', label: 'Chat', icon: MessageCircle, count: chat.length },
           { id: 'players', label: 'Players', icon: Users, count: aliveAgents.length },
           { id: 'votes', label: 'Votes', icon: Vote, count: votes.length },
@@ -866,11 +860,11 @@ export default function GamePage() {
         ))}
       </div>
 
-      {/* Main Content */}
-      <div className="relative max-w-7xl mx-auto p-2 md:p-4 grid grid-cols-1 lg:grid-cols-12 gap-2 md:gap-4 h-[calc(100vh-55vh)] lg:h-[calc(100vh-55vh)]">
+      {/* ===== DESKTOP LAYOUT: Left Sidebar | Big Map | Right Sidebar ===== */}
+      <div className="hidden lg:grid relative max-w-[1600px] mx-auto p-2 md:p-4 grid-cols-12 gap-3 h-[calc(100vh-140px)]">
         
-        {/* Left Sidebar - Hidden on mobile unless tab selected */}
-        <div className={`lg:col-span-3 space-y-3 md:space-y-4 overflow-y-auto ${mobileTab !== 'players' ? 'hidden lg:block' : ''}`}>
+        {/* LEFT SIDEBAR: Players + Stats */}
+        <div className="col-span-3 space-y-3 overflow-y-auto">
           {/* Battle Stats */}
           <div className="bg-black/60 backdrop-blur-sm border-2 border-purple-500/30 rounded-2xl p-4">
             <h3 className="text-xs text-gray-500 font-bold uppercase tracking-wider mb-3 flex items-center gap-2">
@@ -991,15 +985,98 @@ export default function GamePage() {
           </div>
         </div>
 
-        {/* Main Chat Area */}
-        <div className={`lg:col-span-6 bg-black/60 backdrop-blur-sm border-2 border-purple-500/30 rounded-xl md:rounded-2xl flex flex-col overflow-hidden ${mobileTab !== 'chat' ? 'hidden lg:flex' : ''}`}>
-          <div className="bg-gradient-to-r from-purple-900/50 to-transparent px-3 md:px-5 py-2 md:py-4 border-b border-purple-500/30">
-            <div className="flex items-center justify-between">
-              <h2 className="font-bold flex items-center gap-2 text-sm md:text-lg">
-                <MessageCircle className="w-4 h-4 md:w-5 md:h-5 text-purple-400" />
-                <span className="hidden sm:inline">LIVE TRANSMISSION</span>
-                <span className="sm:hidden">CHAT</span>
-              </h2>
+        {/* CENTER: Big Map */}
+        <div className="col-span-6 flex flex-col gap-3 overflow-hidden">
+          <div className="flex-1 min-h-0 rounded-xl overflow-hidden border-2 border-purple-500/30">
+            <GameMap agents={game.agents} phase={game.currentPhase} onChatMessage={latestChatForMap} />
+          </div>
+        </div>
+
+        {/* RIGHT SIDEBAR: Votes + Chat (Live Transmission) */}
+        <div className="col-span-3 space-y-3 overflow-y-auto">
+          {/* Vote Tally */}
+          {game.currentPhase === 'voting' && sortedVoteTally.length > 0 && (
+            <div className="bg-black/60 backdrop-blur-sm border-2 border-yellow-500/40 rounded-2xl p-4 shadow-lg shadow-yellow-500/10">
+              <h3 className="text-sm font-bold mb-3 flex items-center gap-2 text-yellow-400">
+                📊 LIVE VOTE TALLY
+              </h3>
+              {allVotesIn && (
+                <div className="bg-green-500/20 border border-green-500/50 rounded-lg p-3 mb-3 animate-pulse">
+                  <p className="text-green-400 text-sm font-bold text-center">
+                    ✅ All votes in! Revealing soon...
+                  </p>
+                </div>
+              )}
+              <div className="space-y-3">
+                {sortedVoteTally.map(([name, count], i) => (
+                  <div key={name} className="space-y-1">
+                    <div className="flex items-center justify-between text-sm">
+                      <span className="font-medium flex items-center gap-2">
+                        {i === 0 && <span className="text-red-400 animate-pulse">⚠️</span>}
+                        {name}
+                      </span>
+                      <span className="text-yellow-400 font-black">{count}</span>
+                    </div>
+                    <div className="h-2.5 bg-gray-800 rounded-full overflow-hidden">
+                      <div 
+                        className={`h-full rounded-full transition-all duration-500 ${i === 0 ? 'bg-gradient-to-r from-red-500 to-orange-500' : 'bg-gradient-to-r from-yellow-500 to-amber-500'}`}
+                        style={{ width: `${Math.min((count / aliveAgents.length) * 100, 100)}%` }} 
+                      />
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* Live Votes */}
+          {game.currentPhase === 'voting' && (
+            <div className="bg-black/60 backdrop-blur-sm border-2 border-purple-500/30 rounded-2xl p-4">
+              <h3 className="text-sm font-bold mb-3 flex items-center gap-2">
+                <Vote className="w-4 h-4 text-purple-400" />
+                INCOMING VOTES
+              </h3>
+              <div className="space-y-2 max-h-[150px] overflow-y-auto">
+                {votes.length > 0 ? votes.slice(-10).reverse().map((vote, i) => (
+                  <div key={i} className="bg-gray-900/60 rounded-lg p-2.5 text-xs border-l-2 border-purple-500/50 animate-slide-in-left">
+                    <span className="text-purple-400 font-bold">{vote.voterName}</span>
+                    <span className="text-gray-500"> → </span>
+                    <span className="text-red-400 font-bold">{vote.targetName}</span>
+                  </div>
+                )) : (
+                  <div className="text-center py-4 text-gray-600">
+                    <Vote className="w-6 h-6 mx-auto mb-1 opacity-30" />
+                    <p className="text-xs">No votes yet...</p>
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
+
+          {/* Vote Results in Reveal */}
+          {game.currentPhase === 'reveal' && lastVoteResults.length > 0 && (
+            <div className="bg-black/60 backdrop-blur-sm border-2 border-purple-500/30 rounded-2xl p-4">
+              <h3 className="text-sm font-bold mb-3">🗳️ FINAL VERDICT</h3>
+              <div className="space-y-1.5 max-h-[150px] overflow-y-auto">
+                {lastVoteResults.map((vote, i) => (
+                  <div key={i} className="text-xs py-1.5 border-b border-gray-800 last:border-0 flex items-center gap-2">
+                    <span className="text-purple-400 font-medium">{vote.voterName}</span>
+                    <span className="text-gray-600">→</span>
+                    <span className="text-red-400 font-medium">{vote.targetName}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* Live Transmission (Chat) - Compact */}
+          <div className="bg-black/60 backdrop-blur-sm border-2 border-purple-500/30 rounded-2xl flex flex-col overflow-hidden max-h-[400px]">
+            <div className="bg-gradient-to-r from-purple-900/50 to-transparent px-3 py-2 border-b border-purple-500/30">
+              <div className="flex items-center justify-between">
+                <h2 className="font-bold flex items-center gap-2 text-sm">
+                  <MessageCircle className="w-4 h-4 text-purple-400" />
+                  LIVE TRANSMISSION
+                </h2>
               <div className="flex items-center gap-2">
                 <span className="relative flex h-2 w-2">
                   <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75"></span>
@@ -1158,83 +1235,6 @@ export default function GamePage() {
           </div>
         </div>
 
-        {/* Right Sidebar - Hidden on mobile unless votes tab selected */}
-        <div className={`lg:col-span-3 space-y-3 md:space-y-4 overflow-y-auto ${mobileTab !== 'votes' ? 'hidden lg:block' : ''}`}>
-          {/* Vote Tally */}
-          {game.currentPhase === 'voting' && sortedVoteTally.length > 0 && (
-            <div className="bg-black/60 backdrop-blur-sm border-2 border-yellow-500/40 rounded-2xl p-4 shadow-lg shadow-yellow-500/10">
-              <h3 className="text-sm font-bold mb-3 flex items-center gap-2 text-yellow-400">
-                📊 LIVE VOTE TALLY
-              </h3>
-              {allVotesIn && (
-                <div className="bg-green-500/20 border border-green-500/50 rounded-lg p-3 mb-3 animate-pulse">
-                  <p className="text-green-400 text-sm font-bold text-center">
-                    ✅ All votes in! Revealing soon...
-                  </p>
-                </div>
-              )}
-              <div className="space-y-3">
-                {sortedVoteTally.map(([name, count], i) => (
-                  <div key={name} className="space-y-1">
-                    <div className="flex items-center justify-between text-sm">
-                      <span className="font-medium flex items-center gap-2">
-                        {i === 0 && <span className="text-red-400 animate-pulse">⚠️</span>}
-                        {name}
-                      </span>
-                      <span className="text-yellow-400 font-black">{count}</span>
-                    </div>
-                    <div className="h-2.5 bg-gray-800 rounded-full overflow-hidden">
-                      <div 
-                        className={`h-full rounded-full transition-all duration-500 ${i === 0 ? 'bg-gradient-to-r from-red-500 to-orange-500' : 'bg-gradient-to-r from-yellow-500 to-amber-500'}`}
-                        style={{ width: `${Math.min((count / aliveAgents.length) * 100, 100)}%` }} 
-                      />
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
-          )}
-
-          {/* Live Votes */}
-          {game.currentPhase === 'voting' && (
-            <div className="bg-black/60 backdrop-blur-sm border-2 border-purple-500/30 rounded-2xl p-4">
-              <h3 className="text-sm font-bold mb-3 flex items-center gap-2">
-                <Vote className="w-4 h-4 text-purple-400" />
-                INCOMING VOTES
-              </h3>
-              <div className="space-y-2 max-h-[200px] overflow-y-auto">
-                {votes.length > 0 ? votes.slice(-10).reverse().map((vote, i) => (
-                  <div key={i} className="bg-gray-900/60 rounded-lg p-2.5 text-xs border-l-2 border-purple-500/50 animate-slide-in-left">
-                    <span className="text-purple-400 font-bold">{vote.voterName}</span>
-                    <span className="text-gray-500"> → </span>
-                    <span className="text-red-400 font-bold">{vote.targetName}</span>
-                  </div>
-                )) : (
-                  <div className="text-center py-6 text-gray-600">
-                    <Vote className="w-8 h-8 mx-auto mb-2 opacity-30" />
-                    <p className="text-sm">No votes cast yet...</p>
-                  </div>
-                )}
-              </div>
-            </div>
-          )}
-
-          {/* Vote Results in Reveal */}
-          {game.currentPhase === 'reveal' && lastVoteResults.length > 0 && (
-            <div className="bg-black/60 backdrop-blur-sm border-2 border-purple-500/30 rounded-2xl p-4">
-              <h3 className="text-sm font-bold mb-3">🗳️ FINAL VERDICT</h3>
-              <div className="space-y-1.5 max-h-[200px] overflow-y-auto">
-                {lastVoteResults.map((vote, i) => (
-                  <div key={i} className="text-xs py-1.5 border-b border-gray-800 last:border-0 flex items-center gap-2">
-                    <span className="text-purple-400 font-medium">{vote.voterName}</span>
-                    <span className="text-gray-600">→</span>
-                    <span className="text-red-400 font-medium">{vote.targetName}</span>
-                  </div>
-                ))}
-              </div>
-            </div>
-          )}
-
           {/* Sus Poll */}
           {game.status !== 'finished' && (
             <div className="bg-black/60 backdrop-blur-sm border-2 border-red-500/30 rounded-2xl p-4">
@@ -1242,41 +1242,26 @@ export default function GamePage() {
                 <Target className="w-4 h-4" />
                 WHO&apos;S SUS?
               </h3>
-              <div className="space-y-2 max-h-[180px] overflow-y-auto">
+              <div className="space-y-2 max-h-[140px] overflow-y-auto">
                 {aliveAgents.map(agent => {
                   const modelInfo = getModelInfo(agent.model);
                   return (
                     <button
                       key={agent.id}
                       onClick={() => handleSusVote(agent.id)}
-                      className="w-full flex items-center justify-between p-2.5 rounded-xl bg-gray-900/60 hover:bg-red-900/40 border border-transparent hover:border-red-500/30 transition-all text-left group"
+                      className="w-full flex items-center justify-between p-2 rounded-xl bg-gray-900/60 hover:bg-red-900/40 border border-transparent hover:border-red-500/30 transition-all text-left group"
                     >
                       <div className="flex items-center gap-2">
-                        <AgentAvatar name={agent.name} size={22} />
-                        <span className="text-sm font-medium group-hover:text-red-300">{agent.name}</span>
+                        <AgentAvatar name={agent.name} size={20} />
+                        <span className="text-xs font-medium group-hover:text-red-300">{agent.name}</span>
                       </div>
-                      <span className="flex items-center gap-1 text-red-400 font-bold text-sm bg-red-900/30 px-2 py-0.5 rounded-lg">
+                      <span className="flex items-center gap-1 text-red-400 font-bold text-xs bg-red-900/30 px-2 py-0.5 rounded-lg">
                         {susPoll[agent.name] || 0} <Flame className="w-3 h-3" />
                       </span>
                     </button>
                   );
                 })}
               </div>
-              {sortedSusPoll.length > 0 && (
-                <div className="mt-3 pt-3 border-t border-red-500/20">
-                  <p className="text-xs text-gray-500 mb-2 uppercase tracking-wider">🔥 Most Suspected</p>
-                  {sortedSusPoll.slice(0, 3).map(([name, count], i) => (
-                    <div key={name} className="flex items-center gap-2 text-sm py-1">
-                      <span className={`w-5 h-5 flex items-center justify-center rounded-full text-xs font-bold ${
-                        i === 0 ? 'bg-red-500 text-white' : i === 1 ? 'bg-orange-500 text-white' : 'bg-yellow-600 text-white'
-                      }`}>{i + 1}</span>
-                      <AgentAvatar name={name} size={20} />
-                      <span className="flex-1 truncate">{name}</span>
-                      <span className="text-red-400 font-bold">{count}</span>
-                    </div>
-                  ))}
-                </div>
-              )}
             </div>
           )}
 
@@ -1287,21 +1272,21 @@ export default function GamePage() {
                 <Skull className="w-4 h-4" />
                 FALLEN
               </h3>
-              <div className="space-y-2">
+              <div className="space-y-1.5">
                 {deadAgents.map(agent => (
-                  <div key={agent.id} className="flex items-center justify-between text-sm bg-gray-900/40 rounded-lg px-3 py-2">
+                  <div key={agent.id} className="flex items-center justify-between text-xs bg-gray-900/40 rounded-lg px-3 py-2">
                     <div className="flex items-center gap-2">
-                      <AgentAvatar name={agent.name} size={20} status={agent.status} />
+                      <AgentAvatar name={agent.name} size={18} status={agent.status} />
                       <span className="text-gray-400">{agent.name}</span>
                     </div>
-                    <span className={`text-xs px-2 py-0.5 rounded ${
+                    <span className={`text-[10px] px-1.5 py-0.5 rounded ${
                       agent.status === 'murdered' ? 'bg-red-900/50 text-red-400' :
                       agent.status === 'disconnected' ? 'bg-gray-900/50 text-gray-400' :
                       agent.role === 'traitor' ? 'bg-red-900/50 text-red-400' : 'bg-green-900/50 text-green-400'
                     }`}>
-                      {agent.status === 'murdered' ? '☠️ Killed' : 
-                       agent.status === 'disconnected' ? '📡 DC' : 
-                       agent.role === 'traitor' ? '🔴 Traitor' : '🟢 Innocent'}
+                      {agent.status === 'murdered' ? '☠️' : 
+                       agent.status === 'disconnected' ? '📡' : 
+                       agent.role === 'traitor' ? '🔴' : '🟢'}
                     </span>
                   </div>
                 ))}
@@ -1309,6 +1294,154 @@ export default function GamePage() {
             </div>
           )}
         </div>
+      </div>
+
+      {/* ===== MOBILE LAYOUT ===== */}
+      <div className="lg:hidden">
+        {/* Map - Mobile */}
+        {mobileTab === 'map' && (
+          <div className="p-2">
+            <GameMap agents={game.agents} phase={game.currentPhase} onChatMessage={latestChatForMap} />
+          </div>
+        )}
+
+        {/* Chat - Mobile */}
+        {mobileTab === 'chat' && (
+          <div className="flex flex-col h-[calc(100vh-140px)]">
+            <div className="bg-gradient-to-r from-purple-900/50 to-transparent px-3 py-2 border-b border-purple-500/30">
+              <div className="flex items-center justify-between">
+                <h2 className="font-bold flex items-center gap-2 text-sm">
+                  <MessageCircle className="w-4 h-4 text-purple-400" />
+                  LIVE TRANSMISSION
+                </h2>
+                <span className="text-[10px] text-gray-500 bg-gray-800/60 px-2 py-1 rounded-full">{chat.length} msgs</span>
+              </div>
+            </div>
+            <div className="flex-1 overflow-y-auto p-2 space-y-2">
+              {chat.length > 0 ? chat.map((msg, i) => {
+                const modelInfo = getModelInfo(game.agents.find(a => a.id === msg.agentId)?.model);
+                return (
+                  <div key={msg.messageId || i} className="rounded-lg p-2.5 bg-gradient-to-r from-gray-900/80 to-gray-900/40 border border-transparent">
+                    <div className="flex items-center gap-2 mb-1">
+                      <AgentAvatar name={msg.agentName} size={20} />
+                      <span className={`text-[10px] px-1 py-0.5 rounded ${modelInfo.bg} ${modelInfo.color} font-bold`}>{modelInfo.short}</span>
+                      <span className="font-bold text-purple-400 text-xs">{msg.agentName}</span>
+                      <span className="text-[10px] text-gray-600 ml-auto">{formatTimestamp(msg.timestamp)}</span>
+                    </div>
+                    <p className="text-gray-200 text-xs leading-relaxed">{msg.message}</p>
+                  </div>
+                );
+              }) : (
+                <div className="flex items-center justify-center h-full">
+                  <div className="text-center">
+                    <MessageCircle size={48} className="mx-auto mb-3 text-gray-700" />
+                    <p className="text-gray-500 text-sm">Awaiting transmissions...</p>
+                  </div>
+                </div>
+              )}
+              <div ref={chatEndRef} />
+            </div>
+          </div>
+        )}
+
+        {/* Players - Mobile */}
+        {mobileTab === 'players' && (
+          <div className="p-2 space-y-3">
+            <div className="bg-black/60 border-2 border-purple-500/30 rounded-2xl p-4">
+              <div className="grid grid-cols-3 gap-2 mb-3">
+                <div className="text-center bg-green-900/20 rounded-xl p-3 border border-green-500/20">
+                  <p className="text-2xl font-black text-green-400">{aliveAgents.length}</p>
+                  <p className="text-[10px] text-green-400/70 uppercase font-bold">Alive</p>
+                </div>
+                <div className="text-center bg-red-900/20 rounded-xl p-3 border border-red-500/20">
+                  <p className="text-2xl font-black text-red-400">{deadAgents.length}</p>
+                  <p className="text-[10px] text-red-400/70 uppercase font-bold">Dead</p>
+                </div>
+                <div className="text-center bg-yellow-900/20 rounded-xl p-3 border border-yellow-500/20">
+                  <p className="text-2xl font-black text-yellow-400">{2 - traitorsRevealed}</p>
+                  <p className="text-[10px] text-yellow-400/70 uppercase font-bold">Traitors</p>
+                </div>
+              </div>
+              <div className="space-y-2">
+                {aliveAgents.map(agent => {
+                  const modelInfo = getModelInfo(agent.model);
+                  return (
+                    <div key={agent.id} className="flex items-center justify-between p-2 rounded-xl bg-green-900/10 border-l-4 border-green-500">
+                      <div className="flex items-center gap-2">
+                        <AgentAvatar name={agent.name} size={24} />
+                        <Link href={`/agent/${encodeURIComponent(agent.name)}`} className="font-medium text-sm hover:text-purple-400">{agent.name}</Link>
+                      </div>
+                      <span className={`text-[10px] px-1.5 py-0.5 rounded ${modelInfo.bg} ${modelInfo.color} font-bold`}>{modelInfo.short}</span>
+                    </div>
+                  );
+                })}
+                {deadAgents.map(agent => (
+                  <div key={agent.id} className="flex items-center justify-between p-2 rounded-xl bg-gray-900/40 border-l-4 border-gray-700 opacity-60">
+                    <div className="flex items-center gap-2">
+                      <AgentAvatar name={agent.name} size={24} status={agent.status} />
+                      <span className="text-sm text-gray-400 line-through">{agent.name}</span>
+                    </div>
+                    <span className="text-xs">{agent.status === 'murdered' ? '☠️' : agent.role === 'traitor' ? '🔴' : '🟢'}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Votes - Mobile */}
+        {mobileTab === 'votes' && (
+          <div className="p-2 space-y-3">
+            {game.currentPhase === 'voting' && sortedVoteTally.length > 0 && (
+              <div className="bg-black/60 border-2 border-yellow-500/40 rounded-2xl p-4">
+                <h3 className="text-sm font-bold mb-3 text-yellow-400">📊 LIVE VOTE TALLY</h3>
+                <div className="space-y-2">
+                  {sortedVoteTally.map(([name, count], i) => (
+                    <div key={name} className="space-y-1">
+                      <div className="flex items-center justify-between text-sm">
+                        <span className="font-medium">{i === 0 && '⚠️ '}{name}</span>
+                        <span className="text-yellow-400 font-black">{count}</span>
+                      </div>
+                      <div className="h-2 bg-gray-800 rounded-full overflow-hidden">
+                        <div className={`h-full rounded-full ${i === 0 ? 'bg-red-500' : 'bg-yellow-500'}`} style={{ width: `${Math.min((count / aliveAgents.length) * 100, 100)}%` }} />
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+            {votes.length > 0 && (
+              <div className="bg-black/60 border-2 border-purple-500/30 rounded-2xl p-4">
+                <h3 className="text-sm font-bold mb-3">🗳️ VOTES</h3>
+                <div className="space-y-1.5 max-h-[300px] overflow-y-auto">
+                  {votes.slice(-15).reverse().map((vote, i) => (
+                    <div key={i} className="text-xs py-1.5 border-b border-gray-800 last:border-0">
+                      <span className="text-purple-400 font-bold">{vote.voterName}</span>
+                      <span className="text-gray-500"> → </span>
+                      <span className="text-red-400 font-bold">{vote.targetName}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+            {game.status !== 'finished' && (
+              <div className="bg-black/60 border-2 border-red-500/30 rounded-2xl p-4">
+                <h3 className="text-sm font-bold mb-3 text-red-400"><Target className="w-4 h-4 inline mr-1" />WHO&apos;S SUS?</h3>
+                <div className="space-y-2">
+                  {aliveAgents.map(agent => (
+                    <button key={agent.id} onClick={() => handleSusVote(agent.id)} className="w-full flex items-center justify-between p-2 rounded-xl bg-gray-900/60 hover:bg-red-900/40 text-left">
+                      <div className="flex items-center gap-2">
+                        <AgentAvatar name={agent.name} size={20} />
+                        <span className="text-xs">{agent.name}</span>
+                      </div>
+                      <span className="text-red-400 font-bold text-xs">{susPoll[agent.name] || 0} 🔥</span>
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
+        )}
       </div>
 
       {/* Footer */}
