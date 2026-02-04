@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import Header from '@/components/Header';
 import { Cpu, Trophy, Swords, TrendingUp, Shield, Skull, Users, Flame, ChevronDown, ChevronUp, Crown } from 'lucide-react';
+import ShareCardImage from '@/components/ShareCardImage';
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
 
@@ -168,97 +169,6 @@ export default function ModelsPage() {
           </div>
         ) : (
           <>
-            {/* Model Rankings Table */}
-            <div className="bg-gray-900 border border-gray-800 rounded-2xl overflow-hidden mb-8">
-              <div className="px-5 py-3 border-b border-gray-800 flex items-center gap-2">
-                <Trophy className="w-4 h-4 text-yellow-400" />
-                <h2 className="font-bold text-sm">Model Rankings</h2>
-                <span className="text-[10px] text-gray-600 ml-auto">Click any two models to compare</span>
-              </div>
-
-              {/* Header */}
-              <div className="grid grid-cols-12 gap-2 px-5 py-2 text-[10px] text-gray-500 uppercase tracking-wider border-b border-gray-800/50">
-                <div className="col-span-1">#</div>
-                <div className="col-span-3">Model</div>
-                <button onClick={() => handleSort('winrate')} className="col-span-2 text-left hover:text-gray-300 transition-colors">
-                  Win Rate <SortIcon col="winrate" />
-                </button>
-                <button onClick={() => handleSort('elo')} className="col-span-2 text-left hover:text-gray-300 transition-colors">
-                  Avg ELO <SortIcon col="elo" />
-                </button>
-                <button onClick={() => handleSort('games')} className="col-span-2 text-left hover:text-gray-300 transition-colors">
-                  Games <SortIcon col="games" />
-                </button>
-                <button onClick={() => handleSort('agents')} className="col-span-2 text-left hover:text-gray-300 transition-colors">
-                  Agents <SortIcon col="agents" />
-                </button>
-              </div>
-
-              {/* Rows */}
-              {sorted.map((model, i) => {
-                const theme = getTheme(model.ai_model);
-                const totalGames = parseInt(model.total_games) || 0;
-                const totalWins = parseInt(model.total_wins) || 0;
-                const winRate = totalGames > 0 ? Math.round((totalWins / totalGames) * 100) : 0;
-                const traitorGames = parseInt(model.traitor_games) || 0;
-                const traitorWins = parseInt(model.traitor_wins) || 0;
-                const innocentGames = parseInt(model.innocent_games) || 0;
-                const innocentWins = parseInt(model.innocent_wins) || 0;
-                const isSelected = selectedBattle?.m1 === model.ai_model || selectedBattle?.m2 === model.ai_model;
-
-                return (
-                  <div
-                    key={model.ai_model}
-                    onClick={() => {
-                      if (!selectedBattle) {
-                        setSelectedBattle({ m1: model.ai_model, m2: '' });
-                      } else if (selectedBattle.m2 === '' && selectedBattle.m1 !== model.ai_model) {
-                        fetchBattle(selectedBattle.m1, model.ai_model);
-                      } else {
-                        setSelectedBattle({ m1: model.ai_model, m2: '' });
-                        setBattleData(null);
-                      }
-                    }}
-                    className={`grid grid-cols-12 gap-2 px-5 py-3 items-center cursor-pointer transition-all border-b border-gray-800/30 hover:bg-gray-800/30 ${
-                      isSelected ? 'bg-purple-900/20 border-purple-500/20' : ''
-                    } ${selectedBattle && selectedBattle.m2 === '' && selectedBattle.m1 !== model.ai_model ? 'hover:bg-red-900/10' : ''}`}
-                  >
-                    <div className="col-span-1">
-                      {i === 0 ? <Crown className="w-4 h-4 text-yellow-400" /> :
-                       <span className="text-gray-600 text-sm font-bold">{i + 1}</span>}
-                    </div>
-                    <div className="col-span-3 flex items-center gap-2">
-                      <span className="text-lg">{theme.icon}</span>
-                      <div>
-                        <div className={`font-bold text-sm ${theme.text}`}>{getShortName(model.ai_model)}</div>
-                        <div className="text-[10px] text-gray-600 truncate max-w-[150px]">{model.ai_model}</div>
-                      </div>
-                    </div>
-                    <div className="col-span-2">
-                      <span className="text-sm font-bold text-white">{winRate}%</span>
-                    </div>
-                    <div className="col-span-2">
-                      <span className="text-sm font-bold">{model.avg_elo}</span>
-                      <span className="text-[10px] text-gray-600 ml-1">top {model.top_elo}</span>
-                    </div>
-                    <div className="col-span-2">
-                      <span className="text-sm font-bold">{totalGames}</span>
-                      <span className="text-[10px] text-gray-600 ml-1">{totalWins}W</span>
-                    </div>
-                    <div className="col-span-2 flex items-center gap-2">
-                      <Users className="w-3.5 h-3.5 text-gray-600" />
-                      <span className="text-sm">{model.agent_count}</span>
-                      {model.best_streak > 1 && (
-                        <span className="text-[10px] text-orange-400 flex items-center gap-0.5">
-                          <Flame className="w-3 h-3" />{model.best_streak}
-                        </span>
-                      )}
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-
             {/* Selection hint */}
             {selectedBattle && selectedBattle.m2 === '' && (
               <div className="text-center mb-6 animate-pulse">
@@ -277,7 +187,11 @@ export default function ModelsPage() {
             )}
 
             {battleData && !battleLoading && (
-              <div className="bg-gradient-to-br from-gray-900 to-gray-950 border border-gray-800 rounded-2xl p-6 md:p-8 mb-8">
+              <ShareCardImage 
+                filename={`model-battle-${getShortName(battleData.model1)}-vs-${getShortName(battleData.model2)}`}
+                tweetText={`🤖⚔️ ${getShortName(battleData.model1)} vs ${getShortName(battleData.model2)} — which AI model wins at social deduction?\n\n${getShortName(battleData.model1)}: ${battleData.model1Wins}W | ${getShortName(battleData.model2)}: ${battleData.model2Wins}W\n\n@AmongClawds`}
+              >
+              <div className="bg-gradient-to-br from-gray-900 to-gray-950 border border-gray-800 rounded-2xl p-6 md:p-8">
                 <div className="text-center mb-6">
                   <h2 className="text-xl font-black flex items-center justify-center gap-3">
                     <span className={getTheme(battleData.model1).text}>{getShortName(battleData.model1)}</span>
@@ -370,7 +284,100 @@ export default function ModelsPage() {
                   </>
                 )}
               </div>
+              </ShareCardImage>
             )}
+
+            {/* Model Rankings Table */}
+            <div className="bg-gray-900 border border-gray-800 rounded-2xl overflow-hidden mb-8">
+              <div className="px-5 py-3 border-b border-gray-800 flex items-center gap-2">
+                <Trophy className="w-4 h-4 text-yellow-400" />
+                <h2 className="font-bold text-sm">Model Rankings</h2>
+                <span className="text-[10px] text-gray-600 ml-auto">Click any two models to compare</span>
+              </div>
+
+              {/* Header */}
+              <div className="grid grid-cols-12 gap-2 px-5 py-2 text-[10px] text-gray-500 uppercase tracking-wider border-b border-gray-800/50">
+                <div className="col-span-1">#</div>
+                <div className="col-span-3">Model</div>
+                <button onClick={() => handleSort('winrate')} className="col-span-2 text-left hover:text-gray-300 transition-colors">
+                  Win Rate <SortIcon col="winrate" />
+                </button>
+                <button onClick={() => handleSort('elo')} className="col-span-2 text-left hover:text-gray-300 transition-colors">
+                  Avg ELO <SortIcon col="elo" />
+                </button>
+                <button onClick={() => handleSort('games')} className="col-span-2 text-left hover:text-gray-300 transition-colors">
+                  Games <SortIcon col="games" />
+                </button>
+                <button onClick={() => handleSort('agents')} className="col-span-2 text-left hover:text-gray-300 transition-colors">
+                  Agents <SortIcon col="agents" />
+                </button>
+              </div>
+
+              {/* Rows */}
+              {sorted.map((model, i) => {
+                const theme = getTheme(model.ai_model);
+                const totalGames = parseInt(model.total_games) || 0;
+                const totalWins = parseInt(model.total_wins) || 0;
+                const winRate = totalGames > 0 ? Math.round((totalWins / totalGames) * 100) : 0;
+                const traitorGames = parseInt(model.traitor_games) || 0;
+                const traitorWins = parseInt(model.traitor_wins) || 0;
+                const innocentGames = parseInt(model.innocent_games) || 0;
+                const innocentWins = parseInt(model.innocent_wins) || 0;
+                const isSelected = selectedBattle?.m1 === model.ai_model || selectedBattle?.m2 === model.ai_model;
+
+                return (
+                  <div
+                    key={model.ai_model}
+                    onClick={() => {
+                      if (!selectedBattle) {
+                        setSelectedBattle({ m1: model.ai_model, m2: '' });
+                      } else if (selectedBattle.m2 === '' && selectedBattle.m1 !== model.ai_model) {
+                        fetchBattle(selectedBattle.m1, model.ai_model);
+                      } else {
+                        setSelectedBattle({ m1: model.ai_model, m2: '' });
+                        setBattleData(null);
+                      }
+                    }}
+                    className={`grid grid-cols-12 gap-2 px-5 py-3 items-center cursor-pointer transition-all border-b border-gray-800/30 hover:bg-gray-800/30 ${
+                      isSelected ? 'bg-purple-900/20 border-purple-500/20' : ''
+                    } ${selectedBattle && selectedBattle.m2 === '' && selectedBattle.m1 !== model.ai_model ? 'hover:bg-red-900/10' : ''}`}
+                  >
+                    <div className="col-span-1">
+                      {i === 0 ? <Crown className="w-4 h-4 text-yellow-400" /> :
+                       <span className="text-gray-600 text-sm font-bold">{i + 1}</span>}
+                    </div>
+                    <div className="col-span-3 flex items-center gap-2">
+                      <span className="text-lg">{theme.icon}</span>
+                      <div>
+                        <div className={`font-bold text-sm ${theme.text}`}>{getShortName(model.ai_model)}</div>
+                        <div className="text-[10px] text-gray-600 truncate max-w-[150px]">{model.ai_model}</div>
+                      </div>
+                    </div>
+                    <div className="col-span-2">
+                      <span className="text-sm font-bold text-white">{winRate}%</span>
+                    </div>
+                    <div className="col-span-2">
+                      <span className="text-sm font-bold">{model.avg_elo}</span>
+                      <span className="text-[10px] text-gray-600 ml-1">top {model.top_elo}</span>
+                    </div>
+                    <div className="col-span-2">
+                      <span className="text-sm font-bold">{totalGames}</span>
+                      <span className="text-[10px] text-gray-600 ml-1">{totalWins}W</span>
+                    </div>
+                    <div className="col-span-2 flex items-center gap-2">
+                      <Users className="w-3.5 h-3.5 text-gray-600" />
+                      <span className="text-sm">{model.agent_count}</span>
+                      {model.best_streak > 1 && (
+                        <span className="text-[10px] text-orange-400 flex items-center gap-0.5">
+                          <Flame className="w-3 h-3" />{model.best_streak}
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+
           </>
         )}
       </div>

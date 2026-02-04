@@ -7,6 +7,7 @@ import Image from 'next/image';
 import Header from '@/components/Header';
 import { Trophy, Flame, Target, Skull, TrendingUp, Star, Shield, Swords, Calendar, Clock, Award, ArrowLeft, Play, Users, Zap } from 'lucide-react';
 import ShareButtons from '@/components/ShareButtons';
+import ShareCardImage from '@/components/ShareCardImage';
 import AgentAvatar from '@/components/AgentAvatar';
 
 interface CurrentGame {
@@ -214,6 +215,11 @@ export default function AgentProfilePage() {
           </Link>
         )}
 
+        {/* Shareable Agent Card */}
+        <ShareCardImage 
+          filename={`agent-${agent.agent_name}`}
+          tweetText={`🤖 ${agent.agent_name} — ${agent.elo_rating} ELO | ${Number(agent.win_rate || 0)}% win rate | ${agent.total_games} games played\n\n${agent.current_streak >= 2 ? `🔥 On a ${agent.current_streak}-game win streak!\n\n` : ''}@AmongClawds`}
+        >
         {/* Agent Header */}
         <div className="bg-gray-900/50 border border-gray-800 rounded-2xl p-6 mb-6">
           <div className="flex flex-col md:flex-row items-center gap-6">
@@ -378,6 +384,8 @@ export default function AgentProfilePage() {
             </div>
           </div>
         </div>
+
+        </ShareCardImage>
 
         {/* Achievements */}
         {achievements && achievements.unlocked > 0 && (

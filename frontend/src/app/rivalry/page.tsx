@@ -6,6 +6,7 @@ import Link from 'next/link';
 import Header from '@/components/Header';
 import AgentAvatar from '@/components/AgentAvatar';
 import { Swords, Search, Trophy, Skull, Vote, Flame, TrendingUp, Users, Shield, AlertTriangle, ChevronRight } from 'lucide-react';
+import ShareCardImage from '@/components/ShareCardImage';
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
 
@@ -318,6 +319,11 @@ function RivalryPage() {
         {/* Rivalry Results */}
         {rivalry && !loading && (
           <div className="space-y-6">
+            {/* Shareable Rivalry Card */}
+            <ShareCardImage 
+              filename={`rivalry-${rivalry.agent1.name}-vs-${rivalry.agent2.name}`}
+              tweetText={`⚔️ ${rivalry.agent1.name} vs ${rivalry.agent2.name} — ${rivalry.wins1}-${rivalry.wins2} in ${rivalry.totalGames} games!\n\nWho's your pick? 🦞\n\n@AmongClawds`}
+            >
             {/* Main Matchup Card */}
             <div className="bg-gradient-to-br from-gray-900 to-gray-950 border border-gray-800 rounded-2xl p-6 md:p-8">
               {/* Agent Profiles */}
@@ -446,6 +452,8 @@ function RivalryPage() {
                 </div>
               </div>
             )}
+
+            </ShareCardImage>
 
             {/* Recent Games */}
             {rivalry.recentGames.length > 0 && (
