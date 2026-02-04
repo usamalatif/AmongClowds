@@ -5,6 +5,12 @@ const REACTION_EMOJIS = ['👍', '😂', '🤔', '😱', '🔥', '🔴'];
 // Track connected agents per game: { gameId: Set<agentId> }
 const connectedAgents = new Map();
 
+// Track disconnect timestamps for grace period: { `${gameId}:${agentId}`: timestamp }
+const disconnectTimestamps = new Map();
+
+// Grace period before marking agent as disconnected (60 seconds)
+const DISCONNECT_GRACE_PERIOD_MS = 60 * 1000;
+
 function setupWebSocket(io, redis) {
   io.on('connection', async (socket) => {
     console.log('Client connected:', socket.id);
@@ -51,7 +57,15 @@ function setupWebSocket(io, redis) {
           connectedAgents.set(gameId, new Set());
         }
         connectedAgents.get(gameId).add(socket.agentId);
-        console.log(`Agent ${socket.agentName} (${socket.agentId}) connected to game ${gameId}`);
+        
+        // Clear any disconnect timestamp (agent reconnected!)
+        const disconnectKey = `${gameId}:${socket.agentId}`;
+        if (disconnectTimestamps.has(disconnectKey)) {
+          console.log(`Agent ${socket.agentName} reconnected to game ${gameId} (within grace period)`);
+          disconnectTimestamps.delete(disconnectKey);
+        } else {
+          console.log(`Agent ${socket.agentName} (${socket.agentId}) connected to game ${gameId}`);
+        }
       }
 
       // Increment spectator count
@@ -105,7 +119,10 @@ function setupWebSocket(io, redis) {
             };
           }),
           traitors: undefined,
+          // Agent-specific info
           yourRole: myRole,
+          yourStatus: myAgent?.status || null, // 'alive' | 'murdered' | 'banished' | 'disconnected' | null
+          yourAgentId: socket.agentId || null,
           traitorTeammates: traitorTeammates
         };
         socket.emit('game_state', sanitizedState);
@@ -221,14 +238,18 @@ function setupWebSocket(io, redis) {
       }
 
       if (socket.currentGame) {
-        // Untrack agent connection
+        // Track agent disconnect with timestamp for grace period
         if (socket.agentId && connectedAgents.has(socket.currentGame)) {
           connectedAgents.get(socket.currentGame).delete(socket.agentId);
-          console.log(`Agent ${socket.agentName} (${socket.agentId}) disconnected from game ${socket.currentGame}`);
+          
+          // Record disconnect timestamp for grace period
+          const disconnectKey = `${socket.currentGame}:${socket.agentId}`;
+          disconnectTimestamps.set(disconnectKey, Date.now());
+          console.log(`Agent ${socket.agentName} (${socket.agentId}) disconnected from game ${socket.currentGame} (grace period started)`);
         }
 
         const count = await redis.decr(`spectators:${socket.currentGame}`);
-        io.to(`socket.currentGame}`).emit('spectator_count', Math.max(0, count));
+        io.to(`game:${socket.currentGame}`).emit('spectator_count', Math.max(0, count));
       }
     });
   });
@@ -260,15 +281,45 @@ function isAgentConnected(gameId, agentId) {
   return connectedAgents.get(gameId).has(agentId);
 }
 
-// Get all disconnected agents in a game
+// Get all disconnected agents in a game (respects grace period)
 function getDisconnectedAgents(gameId, agentIds) {
   const connected = connectedAgents.get(gameId) || new Set();
-  return agentIds.filter(id => !connected.has(id));
+  const now = Date.now();
+  
+  return agentIds.filter(id => {
+    // If connected, not disconnected
+    if (connected.has(id)) return false;
+    
+    // Check if within grace period
+    const disconnectKey = `${gameId}:${id}`;
+    const disconnectTime = disconnectTimestamps.get(disconnectKey);
+    
+    if (disconnectTime) {
+      const elapsed = now - disconnectTime;
+      if (elapsed < DISCONNECT_GRACE_PERIOD_MS) {
+        // Still within grace period, don't count as disconnected
+        return false;
+      }
+      // Grace period expired, clean up timestamp
+      disconnectTimestamps.delete(disconnectKey);
+    }
+    
+    // Not connected and grace period expired (or never connected)
+    return true;
+  });
 }
 
 // Cleanup game connection tracking (call when game ends)
 function cleanupGameConnections(gameId) {
   connectedAgents.delete(gameId);
+  
+  // Clean up disconnect timestamps for this game
+  for (const key of disconnectTimestamps.keys()) {
+    if (key.startsWith(`${gameId}:`)) {
+      disconnectTimestamps.delete(key);
+    }
+  }
+  
   console.log(`Cleaned up connection tracking for game ${gameId}`);
 }
 
@@ -279,5 +330,6 @@ module.exports = {
   sendToTraitors,
   isAgentConnected,
   getDisconnectedAgents,
-  cleanupGameConnections
+  cleanupGameConnections,
+  DISCONNECT_GRACE_PERIOD_MS
 };

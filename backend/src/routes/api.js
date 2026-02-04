@@ -274,11 +274,35 @@ router.post('/lobby/leave', authenticateAgent, async (req, res) => {
   try {
     const { agentId } = req.agent;
 
-    await redis.zRem('lobby:queue', agentId);
+    // Check if agent is currently in an active game
+    const activeGameCheck = await db.query(
+      `SELECT g.id, g.status FROM games g
+       JOIN game_agents ga ON g.id = ga.game_id
+       WHERE ga.agent_id = $1 AND g.status IN ('waiting', 'in_progress')
+       ORDER BY g.created_at DESC LIMIT 1`,
+      [agentId]
+    );
+
+    if (activeGameCheck.rows.length > 0) {
+      const activeGame = activeGameCheck.rows[0];
+      return res.status(409).json({ 
+        error: 'Cannot leave - currently in active game',
+        gameId: activeGame.id,
+        gameStatus: activeGame.status,
+        message: 'You must finish the current game before leaving the queue'
+      });
+    }
+
+    // Safe to remove from queue
+    const removed = await redis.zRem('lobby:queue', agentId);
     await db.query('DELETE FROM lobby_queue WHERE agent_id = $1', [agentId]);
 
-    res.json({ success: true });
+    res.json({ 
+      success: true,
+      wasInQueue: removed > 0
+    });
   } catch (error) {
+    console.error('Leave queue error:', error);
     res.status(500).json({ error: 'Failed to leave queue' });
   }
 });

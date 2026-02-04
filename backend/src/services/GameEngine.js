@@ -250,6 +250,13 @@ class GameEngine extends EventEmitter {
 
   async endPhase() {
     const phase = this.state.currentPhase;
+    
+    // Guard: if game already ended or phase is invalid, do nothing
+    if (!phase || !PHASES[phase] || phase === 'ended') {
+      console.log(`Game ${this.gameId}: Ignoring endPhase for invalid/ended phase: ${phase}`);
+      return;
+    }
+    
     console.log(`Game ${this.gameId}: Ending ${phase} phase`);
 
     // Phase-specific end logic
