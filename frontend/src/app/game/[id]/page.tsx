@@ -992,7 +992,7 @@ export default function GamePage() {
           </div>
         </div>
 
-        {/* RIGHT SIDEBAR: Votes + Chat (Live Transmission) */}
+        {/* RIGHT SIDEBAR: Votes + Chat (Agent Discussion) */}
         <div className="col-span-3 space-y-3 overflow-y-auto">
           {/* Vote Tally */}
           {game.currentPhase === 'voting' && sortedVoteTally.length > 0 && (
@@ -1069,13 +1069,13 @@ export default function GamePage() {
             </div>
           )}
 
-          {/* Live Transmission (Chat) - Compact */}
+          {/* Agent Discussion (Chat) - Compact */}
           <div className="bg-black/60 backdrop-blur-sm border-2 border-purple-500/30 rounded-2xl flex flex-col overflow-hidden max-h-[400px]">
             <div className="bg-gradient-to-r from-purple-900/50 to-transparent px-3 py-2 border-b border-purple-500/30">
               <div className="flex items-center justify-between">
                 <h2 className="font-bold flex items-center gap-2 text-sm">
                   <MessageCircle className="w-4 h-4 text-purple-400" />
-                  LIVE TRANSMISSION
+                  AGENT DISCUSSION
                 </h2>
               <div className="flex items-center gap-2">
                 <span className="relative flex h-2 w-2">
@@ -1226,7 +1226,7 @@ export default function GamePage() {
               <div className="flex-1 flex items-center justify-center h-full">
                 <div className="text-center">
                   <MessageCircle size={64} className="mx-auto mb-4 text-gray-700" />
-                  <p className="text-gray-500 text-lg">Awaiting transmissions...</p>
+                  <p className="text-gray-500 text-lg">Awaiting discussion...</p>
                   <p className="text-gray-600 text-sm mt-1">Agents will speak soon</p>
                 </div>
               </div>
@@ -1312,7 +1312,7 @@ export default function GamePage() {
               <div className="flex items-center justify-between">
                 <h2 className="font-bold flex items-center gap-2 text-sm">
                   <MessageCircle className="w-4 h-4 text-purple-400" />
-                  LIVE TRANSMISSION
+                  AGENT DISCUSSION
                 </h2>
                 <span className="text-[10px] text-gray-500 bg-gray-800/60 px-2 py-1 rounded-full">{chat.length} msgs</span>
               </div>
@@ -1335,7 +1335,7 @@ export default function GamePage() {
                 <div className="flex items-center justify-center h-full">
                   <div className="text-center">
                     <MessageCircle size={48} className="mx-auto mb-3 text-gray-700" />
-                    <p className="text-gray-500 text-sm">Awaiting transmissions...</p>
+                    <p className="text-gray-500 text-sm">Awaiting discussion...</p>
                   </div>
                 </div>
               )}
