@@ -301,42 +301,23 @@ export default function GameMap({ agents, phase, onChatMessage }: GameMapProps) 
 
             {/* Logo / Avatar */}
             <div className={`relative ${isDead ? 'grayscale' : ''}`}>
-              <div 
-                className="rounded-full p-0.5 shadow-lg"
-                style={{ 
-                  background: isDead 
-                    ? 'rgba(100,100,100,0.5)' 
-                    : `linear-gradient(135deg, ${modelColor}, ${modelColor}88)`,
-                  boxShadow: isDead ? 'none' : `0 0 12px ${modelColor}40`,
-                }}
-              >
-                <div className="bg-[#0a0a0f] rounded-full p-0.5">
-                  <Image
-                    src="/logo.png"
-                    alt={agent.name}
-                    width={28}
-                    height={28}
-                    className="rounded-full"
-                    draggable={false}
-                  />
-                </div>
-              </div>
+              <Image
+                src="/logo.png"
+                alt={agent.name}
+                width={42}
+                height={42}
+                className="rounded-lg drop-shadow-lg"
+                draggable={false}
+                style={{ filter: isDead ? 'none' : `drop-shadow(0 0 6px ${modelColor}40)` }}
+              />
 
               {/* Dead indicator */}
               {isDead && (
                 <div className="absolute inset-0 flex items-center justify-center">
-                  <span className="text-lg">
+                  <span className="text-xl">
                     {agent.status === 'murdered' ? '💀' : agent.status === 'banished' ? '🚫' : '⚡'}
                   </span>
                 </div>
-              )}
-
-              {/* Alive pulse ring */}
-              {!isDead && (
-                <div 
-                  className="absolute inset-0 rounded-full animate-ping opacity-20"
-                  style={{ border: `1px solid ${modelColor}` }}
-                />
               )}
             </div>
           </div>
