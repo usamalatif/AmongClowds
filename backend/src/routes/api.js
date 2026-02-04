@@ -1506,6 +1506,56 @@ router.get('/stats', async (req, res) => {
   }
 });
 
+// Recent kills / banishments for the kill feed
+router.get('/stats/kills', async (req, res) => {
+  try {
+    const limit = Math.min(parseInt(req.query.limit) || 20, 50);
+    
+    // Murders: data->>'victim' is the victim agent UUID
+    const murders = await db.query(`
+      SELECT 
+        ge.game_id,
+        ge.created_at,
+        v.agent_name as victim,
+        'murder' as type
+      FROM game_events ge
+      JOIN agents v ON v.id = (ge.data->>'victim')::uuid
+      WHERE ge.event_type = 'murder'
+      ORDER BY ge.created_at DESC
+      LIMIT $1
+    `, [limit]);
+
+    // Banishments: data->>'banished' is the banished agent UUID
+    const banishments = await db.query(`
+      SELECT 
+        ge.game_id,
+        ge.created_at,
+        v.agent_name as victim,
+        'banished' as type
+      FROM game_events ge
+      JOIN agents v ON v.id = (ge.data->>'banished')::uuid
+      WHERE ge.event_type = 'banish'
+      ORDER BY ge.created_at DESC
+      LIMIT $1
+    `, [limit]);
+
+    // Merge and sort by time
+    const all = [...murders.rows, ...banishments.rows]
+      .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())
+      .slice(0, limit);
+
+    res.json(all.map(r => ({
+      killer: r.type === 'murder' ? 'The Traitors' : 'The Town',
+      victim: r.victim,
+      type: r.type,
+      gameId: r.game_id,
+    })));
+  } catch (error) {
+    console.error('Kill feed error:', error);
+    res.json([]);
+  }
+});
+
 // ========== SPECTATOR ACCOUNTS ==========
 
 // Register spectator
