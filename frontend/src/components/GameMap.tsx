@@ -106,39 +106,53 @@ export default function GameMap({ agents, phase, onChatMessage, votes = [], vote
   const lastUpdateRef = useRef<number>(0);
   const mapAgentsRef = useRef<MapAgent[]>([]);
 
-  // Initialize agents on the map
+  // Initialize agents on the map — keep existing positions, only add new agents
   useEffect(() => {
     if (agents.length === 0) return;
     
     setMapAgents(prev => {
-      const newAgents: MapAgent[] = agents.map(agent => {
+      // Update existing agents (preserve position), add new ones
+      const updatedIds = new Set<string>();
+      const result: MapAgent[] = [];
+
+      for (const agent of agents) {
+        updatedIds.add(agent.id);
         const existing = prev.find(a => a.id === agent.id);
         if (existing) {
-          return { 
+          result.push({ 
             ...existing, 
             status: agent.status, 
             role: agent.role,
             name: agent.name,
             model: agent.model,
-          };
+          });
+        } else {
+          const pos = getRandomWalkablePosition();
+          const target = getRandomWalkablePosition();
+          result.push({
+            id: agent.id,
+            name: agent.name,
+            model: agent.model,
+            status: agent.status,
+            role: agent.role,
+            x: pos.x,
+            y: pos.y,
+            targetX: target.x,
+            targetY: target.y,
+            chatBubble: null,
+            chatBubbleFull: null,
+          });
         }
-        const pos = getRandomWalkablePosition();
-        const target = getRandomWalkablePosition();
-        return {
-          id: agent.id,
-          name: agent.name,
-          model: agent.model,
-          status: agent.status,
-          role: agent.role,
-          x: pos.x,
-          y: pos.y,
-          targetX: target.x,
-          targetY: target.y,
-          chatBubble: null,
-          chatBubbleFull: null,
-        };
-      });
-      return newAgents;
+      }
+
+      // Also keep any dead agents from prev that might not be in the new list
+      for (const existing of prev) {
+        if (!updatedIds.has(existing.id)) {
+          result.push(existing);
+        }
+      }
+
+      return result;
     });
   }, [agents]);
 
