@@ -86,13 +86,21 @@ function getModelColor(model?: string): string {
   return '#9ca3af';
 }
 
+interface VoteInfo {
+  voterId: string;
+  targetId: string;
+  targetName: string;
+}
+
 interface GameMapProps {
   agents: Agent[];
   phase: string;
   onChatMessage?: ChatMessage | null;
+  votes?: VoteInfo[];
+  voteTally?: Record<string, number>;
 }
 
-export default function GameMap({ agents, phase, onChatMessage }: GameMapProps) {
+export default function GameMap({ agents, phase, onChatMessage, votes = [], voteTally = {} }: GameMapProps) {
   const [mapAgents, setMapAgents] = useState<MapAgent[]>([]);
   const animFrameRef = useRef<number>(0);
   const lastUpdateRef = useRef<number>(0);
@@ -228,9 +236,18 @@ export default function GameMap({ agents, phase, onChatMessage }: GameMapProps) 
       <div className={`absolute inset-0 ${phaseOverlay} transition-colors duration-1000 pointer-events-none`} />
 
       {/* Agents */}
-      {mapAgents.map(agent => {
+      {(() => {
+        // Find who voted and who has most votes
+        const voterIds = new Set(votes.map(v => v.voterId));
+        const tallyEntries = Object.entries(voteTally);
+        const maxVotes = tallyEntries.length > 0 ? Math.max(...tallyEntries.map(([, c]) => c)) : 0;
+        const mostVotedNames = maxVotes > 0 ? tallyEntries.filter(([, c]) => c === maxVotes).map(([name]) => name) : [];
+
+        return mapAgents.map(agent => {
         const isDead = agent.status !== 'alive';
         const modelColor = getModelColor(agent.model);
+        const hasVoted = phase === 'voting' && voterIds.has(agent.id);
+        const isMostVoted = phase === 'voting' && mostVotedNames.includes(agent.name);
         
         return (
           <div
@@ -244,8 +261,19 @@ export default function GameMap({ agents, phase, onChatMessage }: GameMapProps) 
               zIndex: isDead ? 1 : 10,
             }}
           >
-            {/* Thinking indicator - shows when no chat bubble */}
-            {!agent.chatBubble && !isDead && (
+            {/* Voting phase: thumbs up if voted, tensed if most voted */}
+            {phase === 'voting' && !isDead && (hasVoted || isMostVoted) && !agent.chatBubble && (
+              <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-1 text-xl animate-fadeInUp">
+                {isMostVoted ? (
+                  <span className="animate-pulse">😰</span>
+                ) : hasVoted ? (
+                  <span>👍</span>
+                ) : null}
+              </div>
+            )}
+
+            {/* Thinking indicator - shows when no chat bubble and not in voting state */}
+            {!agent.chatBubble && !isDead && !(phase === 'voting' && (hasVoted || isMostVoted)) && (
               <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-1">
                 <div className="flex items-center gap-0.5 bg-black/60 rounded-full px-1.5 py-0.5">
                   <span className="w-1.5 h-1.5 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '0ms' }} />
@@ -330,7 +358,8 @@ export default function GameMap({ agents, phase, onChatMessage }: GameMapProps) 
             </div>
           </div>
         );
-      })}
+      });
+      })()}
 
       {/* Custom animations */}
       <style jsx global>{`

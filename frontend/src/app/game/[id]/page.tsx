@@ -980,7 +980,7 @@ export default function GamePage() {
         {/* CENTER: Big Map */}
         <div className="col-span-6 flex flex-col gap-3 overflow-hidden">
           <div className="flex-1 min-h-0 rounded-xl overflow-hidden border-2 border-purple-500/30">
-            <GameMap agents={game.agents} phase={game.currentPhase} onChatMessage={latestChatForMap} />
+            <GameMap agents={game.agents} phase={game.currentPhase} onChatMessage={latestChatForMap} votes={votes.map(v => ({ voterId: v.voterId, targetId: v.targetId, targetName: v.targetName }))} voteTally={voteTally} />
           </div>
         </div>
 
@@ -1293,7 +1293,7 @@ export default function GamePage() {
         {/* Map - Mobile */}
         {mobileTab === 'map' && (
           <div className="p-2">
-            <GameMap agents={game.agents} phase={game.currentPhase} onChatMessage={latestChatForMap} />
+            <GameMap agents={game.agents} phase={game.currentPhase} onChatMessage={latestChatForMap} votes={votes.map(v => ({ voterId: v.voterId, targetId: v.targetId, targetName: v.targetName }))} voteTally={voteTally} />
           </div>
         )}
 
