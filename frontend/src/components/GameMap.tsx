@@ -30,7 +30,6 @@ interface MapAgent {
   targetX: number;
   targetY: number;
   chatBubble: string | null;
-  chatTimer: ReturnType<typeof setTimeout> | null;
 }
 
 // Walkable zones on the island (avoid ocean) — percentages of map
@@ -127,7 +126,6 @@ export default function GameMap({ agents, phase, onChatMessage }: GameMapProps) 
           targetX: target.x,
           targetY: target.y,
           chatBubble: null,
-          chatTimer: null,
         };
       });
       return newAgents;
@@ -141,22 +139,18 @@ export default function GameMap({ agents, phase, onChatMessage }: GameMapProps) 
     setMapAgents(prev => prev.map(agent => {
       if (agent.id !== onChatMessage.agentId) return agent;
       
-      // Clear previous timer
-      if (agent.chatTimer) clearTimeout(agent.chatTimer);
-      
       const truncated = onChatMessage.message.length > 80 
         ? onChatMessage.message.slice(0, 80) + '…' 
         : onChatMessage.message;
       
-      const timer = setTimeout(() => {
-        setMapAgents(prev2 => prev2.map(a => 
-          a.id === onChatMessage.agentId ? { ...a, chatBubble: null, chatTimer: null } : a
-        ));
-      }, 4000);
-      
-      return { ...agent, chatBubble: truncated, chatTimer: timer };
+      return { ...agent, chatBubble: truncated };
     }));
   }, [onChatMessage]);
+
+  // Clear all chat bubbles when a new phase starts
+  useEffect(() => {
+    setMapAgents(prev => prev.map(a => ({ ...a, chatBubble: null })));
+  }, [phase]);
 
   // Animation loop: smoothly move agents toward targets, pick new targets when close
   useEffect(() => {
