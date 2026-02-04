@@ -262,8 +262,8 @@ export default function GameMap({ agents, phase, onChatMessage, votes = [], vote
             }}
           >
             {/* Voting phase: thumbs up if voted, tensed if most voted */}
-            {phase === 'voting' && !isDead && (hasVoted || isMostVoted) && !agent.chatBubble && (
-              <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-1 text-xl animate-fadeInUp">
+            {phase === 'voting' && !isDead && (hasVoted || isMostVoted) && (
+              <div className="absolute -top-1 -right-1 text-lg z-20 animate-fadeInUp drop-shadow-lg">
                 {isMostVoted ? (
                   <span className="animate-pulse">😰</span>
                 ) : hasVoted ? (
@@ -272,8 +272,8 @@ export default function GameMap({ agents, phase, onChatMessage, votes = [], vote
               </div>
             )}
 
-            {/* Thinking indicator - shows when no chat bubble and not in voting state */}
-            {!agent.chatBubble && !isDead && !(phase === 'voting' && (hasVoted || isMostVoted)) && (
+            {/* Thinking indicator - shows when no chat bubble */}
+            {!agent.chatBubble && !isDead && (
               <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-1">
                 <div className="flex items-center gap-0.5 bg-black/60 rounded-full px-1.5 py-0.5">
                   <span className="w-1.5 h-1.5 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '0ms' }} />
