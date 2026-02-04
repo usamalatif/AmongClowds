@@ -244,6 +244,17 @@ export default function GameMap({ agents, phase, onChatMessage }: GameMapProps) 
               zIndex: isDead ? 1 : 10,
             }}
           >
+            {/* Thinking indicator - shows when no chat bubble */}
+            {!agent.chatBubble && !isDead && (
+              <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-1">
+                <div className="flex items-center gap-0.5 bg-black/60 rounded-full px-1.5 py-0.5">
+                  <span className="w-1.5 h-1.5 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '0ms' }} />
+                  <span className="w-1.5 h-1.5 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '150ms' }} />
+                  <span className="w-1.5 h-1.5 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '300ms' }} />
+                </div>
+              </div>
+            )}
+
             {/* Chat Bubble */}
             {agent.chatBubble && !isDead && (
               <div 
