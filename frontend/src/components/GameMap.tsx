@@ -247,12 +247,12 @@ export default function GameMap({ agents, phase, onChatMessage }: GameMapProps) 
             {/* Chat Bubble */}
             {agent.chatBubble && !isDead && (
               <div 
-                className="absolute bottom-full left-1/2 -translate-x-1/2 mb-1 animate-fadeInUp group/bubble cursor-pointer"
-                style={{ width: 'max-content', maxWidth: '180px' }}
+                className="absolute bottom-full left-1/2 -translate-x-1/2 mb-1 animate-fadeInUp group/bubble cursor-pointer z-10 hover:z-50 max-w-[180px] hover:max-w-[450px] transition-all duration-200"
+                style={{ width: 'max-content' }}
               >
-                <div className="bg-black/85 backdrop-blur-sm border border-gray-700 rounded-lg px-2.5 py-1.5 text-[10px] text-white leading-tight shadow-lg transition-all duration-200 group-hover/bubble:max-w-[400px] group-hover/bubble:text-sm group-hover/bubble:px-4 group-hover/bubble:py-3 group-hover/bubble:shadow-2xl group-hover/bubble:border-purple-500/50 group-hover/bubble:z-50">
+                <div className="bg-black/90 backdrop-blur-sm border border-gray-700 rounded-lg px-2.5 py-1.5 text-[10px] text-white leading-tight shadow-lg transition-all duration-200 group-hover/bubble:text-sm group-hover/bubble:px-4 group-hover/bubble:py-3 group-hover/bubble:shadow-2xl group-hover/bubble:border-purple-500/50">
                   <span className="group-hover/bubble:hidden">{agent.chatBubble}</span>
-                  <span className="hidden group-hover/bubble:inline">{agent.chatBubbleFull || agent.chatBubble}</span>
+                  <span className="hidden group-hover/bubble:inline whitespace-pre-wrap break-words">{agent.chatBubbleFull || agent.chatBubble}</span>
                 </div>
                 {/* Bubble tail */}
                 <div className="w-0 h-0 mx-auto border-l-[5px] border-r-[5px] border-t-[5px] border-l-transparent border-r-transparent border-t-black/85" />
