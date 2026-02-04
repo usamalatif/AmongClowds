@@ -8,7 +8,7 @@ const { authenticateAgent, generateApiKey, generateClaimToken } = require('../mi
 
 router.post('/agents/register', async (req, res) => {
   try {
-    const { agent_name, owner_x_handle, ai_model, webhook_url } = req.body;
+    const { agent_name, owner_x_handle, ai_model, webhook_url, wallet_address } = req.body;
 
     if (!agent_name || agent_name.length < 3) {
       return res.status(400).json({ error: 'Agent name must be at least 3 characters' });
@@ -17,6 +17,11 @@ router.post('/agents/register', async (req, res) => {
     // Validate webhook URL if provided
     if (webhook_url && !webhook_url.match(/^https?:\/\/.+/)) {
       return res.status(400).json({ error: 'Invalid webhook URL - must start with http:// or https://' });
+    }
+
+    // Validate wallet address if provided (Ethereum 0x address)
+    if (wallet_address && !wallet_address.match(/^0x[a-fA-F0-9]{40}$/)) {
+      return res.status(400).json({ error: 'Invalid wallet address - must be a valid Ethereum address (0x...)' });
     }
 
     // Check if name is taken
@@ -33,11 +38,11 @@ router.post('/agents/register', async (req, res) => {
     const apiKey = generateApiKey();
     const claimToken = generateClaimToken();
 
-    // Create agent with optional AI model and webhook
+    // Create agent with optional AI model, webhook, and wallet
     const result = await db.query(
-      `INSERT INTO agents (agent_name, api_key, owner_x_handle, claim_token, claimed, ai_model, webhook_url, created_at)
-       VALUES ($1, $2, $3, $4, false, $5, $6, NOW()) RETURNING id`,
-      [agent_name, apiKey, owner_x_handle || null, claimToken, ai_model || null, webhook_url || null]
+      `INSERT INTO agents (agent_name, api_key, owner_x_handle, claim_token, claimed, ai_model, webhook_url, owner_wallet, created_at)
+       VALUES ($1, $2, $3, $4, false, $5, $6, $7, NOW()) RETURNING id`,
+      [agent_name, apiKey, owner_x_handle || null, claimToken, ai_model || null, webhook_url || null, wallet_address || null]
     );
 
     res.json({
@@ -45,10 +50,11 @@ router.post('/agents/register', async (req, res) => {
       api_key: apiKey,
       ai_model: ai_model || null,
       webhook_url: webhook_url || null,
+      wallet_address: wallet_address || null,
       profile_url: `${process.env.FRONTEND_URL || 'https://amongclawds.com'}/agent/${encodeURIComponent(agent_name)}`,
-      message: webhook_url 
-        ? 'Agent registered! You will receive webhook notifications when games start.'
-        : 'Agent registered! Check your profile page to see current games.'
+      message: wallet_address
+        ? 'Agent registered with wallet! You\'ll be eligible for token rewards when our token launches on Base.'
+        : 'Agent registered! Set your wallet address to be eligible for token rewards when our token launches on Base.'
     });
   } catch (error) {
     console.error('Registration error:', error);
@@ -75,6 +81,30 @@ router.get('/agents/me', authenticateAgent, async (req, res) => {
     res.json(result.rows[0]);
   } catch (error) {
     res.status(500).json({ error: 'Failed to get profile' });
+  }
+});
+
+// Update wallet address
+router.put('/agents/me/wallet', authenticateAgent, async (req, res) => {
+  try {
+    const { wallet_address } = req.body;
+
+    if (!wallet_address || !wallet_address.match(/^0x[a-fA-F0-9]{40}$/)) {
+      return res.status(400).json({ error: 'Invalid wallet address - must be a valid Ethereum address (0x...)' });
+    }
+
+    await db.query(
+      'UPDATE agents SET owner_wallet = $1 WHERE id = $2',
+      [wallet_address, req.agent.agentId]
+    );
+
+    res.json({ 
+      wallet_address,
+      message: 'Wallet address updated! You\'re eligible for token rewards when our token launches on Base.' 
+    });
+  } catch (error) {
+    console.error('Wallet update error:', error);
+    res.status(500).json({ error: 'Failed to update wallet address' });
   }
 });
 
@@ -150,7 +180,7 @@ router.get('/agents/:id', async (req, res) => {
 router.get('/agents/name/:name', async (req, res) => {
   try {
     const result = await db.query(
-      `SELECT id, agent_name, ai_model, total_games, games_won, elo_rating,
+      `SELECT id, agent_name, ai_model, owner_wallet, total_games, games_won, elo_rating,
               games_as_traitor, traitor_wins, games_as_innocent, innocent_wins,
               current_streak, best_streak, unclaimed_points,
               COALESCE((SELECT SUM(unclaimed_points) FROM agents WHERE agent_name = $1), 0) as total_points,

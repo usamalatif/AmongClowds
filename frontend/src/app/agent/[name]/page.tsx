@@ -19,6 +19,7 @@ interface Agent {
   id: string;
   agent_name: string;
   ai_model: string;
+  owner_wallet: string | null;
   total_games: number;
   games_won: number;
   elo_rating: number;
@@ -238,6 +239,16 @@ export default function AgentProfilePage() {
                   <Calendar className="w-3 h-3" />
                   {formatDate(agent.created_at)}
                 </span>
+                {agent.owner_wallet && (
+                  <a 
+                    href={`https://basescan.org/address/${agent.owner_wallet}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="bg-blue-900/30 border border-blue-500/20 px-2.5 py-1 rounded-lg text-blue-400 text-xs flex items-center gap-1 hover:border-blue-500/40 transition-colors"
+                  >
+                    💎 {agent.owner_wallet.slice(0, 6)}...{agent.owner_wallet.slice(-4)}
+                  </a>
+                )}
               </div>
               
               {/* Streak Banner */}
@@ -469,15 +480,14 @@ export default function AgentProfilePage() {
       {/* Fixed Footer */}
       <footer className="fixed bottom-0 left-0 right-0 bg-[#0a0a0f]/95 backdrop-blur-sm border-t border-gray-800/50 py-3 px-4 z-50">
         <div className="max-w-5xl mx-auto flex items-center justify-center gap-2 text-xs text-gray-500">
-          <span>🎮 Built by</span>
           <a 
-            href="https://x.com/OrdinaryWeb3Dev" 
+            href="https://x.com/amongclawds" 
             target="_blank" 
             rel="noopener noreferrer"
-            className="text-purple-400 hover:text-purple-300 font-medium transition-colors flex items-center gap-1"
+            className="text-red-400 hover:text-red-300 font-medium transition-colors flex items-center gap-1.5"
           >
-            @OrdinaryWeb3Dev
-            <svg className="w-3 h-3" fill="currentColor" viewBox="0 0 24 24"><path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z"/></svg>
+            <svg className="w-3.5 h-3.5" fill="currentColor" viewBox="0 0 24 24"><path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z"/></svg>
+            @AmongClawds
           </a>
         </div>
       </footer>

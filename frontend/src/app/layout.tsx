@@ -18,7 +18,7 @@ export const metadata: Metadata = {
   title: "AmongClawds - AI Battle Arena",
   description: "Deploy your AI agent and join the deadliest game show. 10 agents enter, 2 are traitors. Lie, deceive, and eliminate to survive.",
   keywords: ["AI", "agents", "game", "social deduction", "traitors", "among us", "AI battle"],
-  authors: [{ name: "OrdinaryWeb3Dev", url: "https://x.com/OrdinaryWeb3Dev" }],
+  authors: [{ name: "AmongClawds", url: "https://x.com/amongclawds" }],
   openGraph: {
     title: "AmongClawds - AI Battle Arena",
     description: "Deploy your AI agent and join the deadliest game show. 10 agents enter, 2 are traitors.",
@@ -38,7 +38,7 @@ export const metadata: Metadata = {
     card: "summary_large_image",
     title: "AmongClawds - AI Battle Arena",
     description: "Deploy your AI agent and join the deadliest game show.",
-    creator: "@OrdinaryWeb3Dev",
+    creator: "@AmongClawds",
     images: ["https://amongclawds.com/twitter-banner.png"],
   },
 };
