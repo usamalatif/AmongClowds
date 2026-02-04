@@ -116,6 +116,7 @@ export default function GamePage() {
   const [predictionSubmitted, setPredictionSubmitted] = useState(false);
   const [predictionResult, setPredictionResult] = useState<{ isCorrect: boolean; pointsEarned: number } | null>(null);
   const [spectatorId, setSpectatorId] = useState<string>('');
+  const [spectatorWallet, setSpectatorWallet] = useState<string>('');
   const [showPredictionPanel, setShowPredictionPanel] = useState(true);
   const [newAchievements, setNewAchievements] = useState<Array<{ id: string; name: string; icon: string; description: string; rarity: string; agentName: string }>>([]);
 
@@ -138,6 +139,10 @@ export default function GamePage() {
       localStorage.setItem('spectatorId', id);
     }
     setSpectatorId(id);
+
+    // Load saved wallet
+    const savedWallet = localStorage.getItem('spectatorWallet') || '';
+    setSpectatorWallet(savedWallet);
     
     // Check if we already submitted a prediction for this game
     const submitted = localStorage.getItem(`prediction_${gameId}`);
@@ -463,13 +468,19 @@ export default function GamePage() {
   const submitPrediction = async () => {
     if (selectedTraitors.length !== 2 || !spectatorId) return;
     
+    // Save wallet to localStorage for future use
+    if (spectatorWallet) {
+      localStorage.setItem('spectatorWallet', spectatorWallet);
+    }
+    
     try {
       const res = await fetch(`${API_URL}/api/v1/games/${gameId}/predictions`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           spectatorId,
-          predictedTraitorIds: selectedTraitors
+          predictedTraitorIds: selectedTraitors,
+          walletAddress: spectatorWallet || undefined
         })
       });
       
@@ -1236,8 +1247,8 @@ export default function GamePage() {
             </div>
           )}
 
-          {/* 🎯 Traitor Prediction Panel */}
-          {game.status !== 'finished' && showPredictionPanel && (
+          {/* 🎯 Traitor Prediction Panel - Only shown during first 3 rounds */}
+          {game.status !== 'finished' && showPredictionPanel && game.currentRound <= 3 && (
             <div className="bg-black/60 backdrop-blur-sm border-2 border-yellow-500/30 rounded-2xl p-4">
               <div className="flex items-center justify-between mb-3">
                 <h3 className="text-sm font-bold flex items-center gap-2 text-yellow-400">
@@ -1283,10 +1294,20 @@ export default function GamePage() {
                       </button>
                     ))}
                   </div>
-                  <div className="mt-3 pt-3 border-t border-yellow-500/20">
-                    <p className="text-xs text-gray-500 mb-2">
+                  <div className="mt-3 pt-3 border-t border-yellow-500/20 space-y-2">
+                    <p className="text-xs text-gray-500">
                       Selected: {selectedTraitors.length}/2
                     </p>
+                    <input
+                      type="text"
+                      placeholder="Wallet address (0x...) for rewards"
+                      value={spectatorWallet}
+                      onChange={(e) => setSpectatorWallet(e.target.value)}
+                      className="w-full px-3 py-2 rounded-lg bg-gray-900/80 border border-gray-700 text-xs text-gray-300 placeholder-gray-600 focus:border-yellow-500/50 focus:outline-none"
+                    />
+                    {!spectatorWallet && (
+                      <p className="text-[10px] text-yellow-500/70">💰 Add wallet to earn token rewards for correct predictions</p>
+                    )}
                     <button
                       onClick={submitPrediction}
                       disabled={selectedTraitors.length !== 2}

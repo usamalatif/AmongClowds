@@ -42,7 +42,7 @@ interface GameHistory {
   winner: string;
   rounds: number;
   role: string;
-  survived: boolean;
+  agent_status: string;
   won: boolean;
   created_at: string;
   finished_at: string;
@@ -414,6 +414,63 @@ export default function AgentProfilePage() {
           </div>
         )}
 
+        {/* Performance Graph */}
+        {games.length >= 2 && (
+          <div className="bg-gray-900/50 border border-gray-800 rounded-xl p-5 mb-6">
+            <div className="flex items-center gap-2 mb-4">
+              <TrendingUp className="w-5 h-5 text-green-400" />
+              <h3 className="font-bold">Performance</h3>
+              <span className="bg-gray-800 px-2 py-0.5 rounded text-xs text-gray-400">Last {games.length} games</span>
+            </div>
+
+            {/* Win/Loss bar chart */}
+            <div className="flex items-end gap-1 h-24 mb-3">
+              {[...games].reverse().map((game, i) => (
+                <div
+                  key={game.id}
+                  className="flex-1 flex flex-col items-center justify-end h-full group relative"
+                >
+                  <div
+                    className={`w-full rounded-t transition-all ${
+                      game.won
+                        ? 'bg-green-500 group-hover:bg-green-400'
+                        : 'bg-red-500 group-hover:bg-red-400'
+                    }`}
+                    style={{ height: game.won ? '100%' : '40%' }}
+                  />
+                  {/* Tooltip */}
+                  <div className="absolute -top-10 left-1/2 -translate-x-1/2 bg-black/90 border border-gray-700 rounded-lg px-2 py-1 text-[10px] whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-10">
+                    <span className={game.won ? 'text-green-400' : 'text-red-400'}>
+                      {game.won ? 'W' : 'L'}
+                    </span>
+                    {' '}as {game.role === 'traitor' ? '🔴' : '🟢'} • R{game.rounds}
+                  </div>
+                </div>
+              ))}
+            </div>
+
+            {/* Legend + Running win rate */}
+            <div className="flex items-center justify-between text-xs text-gray-500">
+              <div className="flex items-center gap-3">
+                <span className="flex items-center gap-1"><span className="w-2.5 h-2.5 bg-green-500 rounded-sm" /> Win</span>
+                <span className="flex items-center gap-1"><span className="w-2.5 h-2.5 bg-red-500 rounded-sm" /> Loss</span>
+              </div>
+              <div className="flex items-center gap-1">
+                <span className="text-gray-400">Recent:</span>
+                <span className={`font-bold ${
+                  Math.round((games.filter(g => g.won).length / games.length) * 100) >= 50 
+                    ? 'text-green-400' : 'text-red-400'
+                }`}>
+                  {Math.round((games.filter(g => g.won).length / games.length) * 100)}% WR
+                </span>
+                <span className="text-gray-600">
+                  ({games.filter(g => g.won).length}W-{games.filter(g => !g.won).length}L)
+                </span>
+              </div>
+            </div>
+          </div>
+        )}
+
         {/* Game History */}
         <div className="bg-gray-900/50 border border-gray-800 rounded-xl p-5">
           <div className="flex items-center gap-2 mb-4">
@@ -457,9 +514,9 @@ export default function AgentProfilePage() {
                       {game.role === 'traitor' ? 'Traitor' : 'Innocent'}
                     </span>
 
-                    {/* Survived */}
-                    <span className={`text-xs ${game.survived ? 'text-green-400' : 'text-gray-500'}`}>
-                      {game.survived ? '✓ Survived' : '☠ Eliminated'}
+                    {/* Status */}
+                    <span className={`text-xs ${game.agent_status === 'alive' ? 'text-green-400' : 'text-gray-500'}`}>
+                      {game.agent_status === 'alive' ? '✓ Survived' : `☠ ${game.agent_status}`}
                     </span>
                   </div>
 

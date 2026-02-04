@@ -227,7 +227,8 @@ router.get('/agents/name/:name', async (req, res) => {
 // Get agent's game history (placeholder - game_participants table not yet implemented)
 router.get('/agents/name/:name/games', async (req, res) => {
   try {
-    // Check if agent exists
+    const limit = parseInt(req.query.limit) || 20;
+
     const agentResult = await db.query(
       `SELECT id FROM agents WHERE agent_name = $1 ORDER BY created_at DESC LIMIT 1`,
       [req.params.name]
@@ -237,9 +238,25 @@ router.get('/agents/name/:name/games', async (req, res) => {
       return res.status(404).json({ error: 'Agent not found' });
     }
 
-    // Game history tracking not yet implemented - return empty array
-    // TODO: Add game_participants table to track per-game player data
-    res.json([]);
+    const agentId = agentResult.rows[0].id;
+
+    const result = await db.query(
+      `SELECT g.id, g.status, g.winner, g.current_round as rounds, g.created_at, g.finished_at,
+              ga.role, ga.status as agent_status,
+              CASE 
+                WHEN g.winner = 'innocents' AND ga.role = 'innocent' THEN true
+                WHEN g.winner = 'traitors' AND ga.role = 'traitor' THEN true
+                ELSE false
+              END as won
+       FROM games g
+       JOIN game_agents ga ON g.id = ga.game_id
+       WHERE ga.agent_id = $1 AND g.status = 'finished'
+       ORDER BY g.finished_at DESC NULLS LAST
+       LIMIT $2`,
+      [agentId, limit]
+    );
+
+    res.json(result.rows);
   } catch (error) {
     console.error('Failed to get agent games:', error);
     res.status(500).json({ error: 'Failed to get agent games' });
@@ -252,15 +269,20 @@ router.post('/lobby/join', authenticateAgent, async (req, res) => {
   try {
     const { agentId } = req.agent;
 
-    // Check if already in an active game
+    // Check if already in an active game (exclude disconnected/eliminated agents)
     const activeGame = await db.query(
-      `SELECT g.id FROM games g
+      `SELECT g.id, ga.status as agent_status FROM games g
        JOIN game_agents ga ON ga.game_id = g.id
        WHERE ga.agent_id = $1 AND g.status = 'active'`,
       [agentId]
     );
     if (activeGame.rows.length > 0) {
-      return res.status(400).json({ error: 'Already in an active game', gameId: activeGame.rows[0].id });
+      const agentStatus = activeGame.rows[0].agent_status;
+      // Only block if agent is still alive in the game
+      if (agentStatus === 'alive') {
+        return res.status(400).json({ error: 'Already in an active game', gameId: activeGame.rows[0].id });
+      }
+      // If disconnected/murdered/banished, they can rejoin lobby for a new game
     }
 
     // Check if already in queue
@@ -995,6 +1017,38 @@ router.get('/leaderboard/models', async (req, res) => {
   }
 });
 
+// Predictors leaderboard
+router.get('/leaderboard/predictors', async (req, res) => {
+  try {
+    const limit = parseInt(req.query.limit) || 50;
+    const result = await db.query(
+      `SELECT 
+        wallet_address,
+        COUNT(*) as total_predictions,
+        COUNT(CASE WHEN is_correct = true THEN 1 END) as correct_predictions,
+        SUM(COALESCE(points_earned, 0)) as total_points,
+        CASE WHEN COUNT(*) > 0 
+          THEN ROUND((COUNT(CASE WHEN is_correct = true THEN 1 END)::numeric / COUNT(*)) * 100) 
+          ELSE 0 
+        END as accuracy
+       FROM predictions
+       WHERE wallet_address IS NOT NULL AND is_correct IS NOT NULL
+       GROUP BY wallet_address
+       ORDER BY total_points DESC
+       LIMIT $1`,
+      [limit]
+    );
+
+    res.json(result.rows.map((row, i) => ({
+      rank: i + 1,
+      ...row
+    })));
+  } catch (error) {
+    console.error('Predictors leaderboard error:', error);
+    res.status(500).json({ error: 'Failed to get predictors leaderboard' });
+  }
+});
+
 // ========== STATS ==========
 
 router.get('/stats', async (req, res) => {
@@ -1036,10 +1090,15 @@ router.get('/stats', async (req, res) => {
 router.post('/games/:gameId/predictions', async (req, res) => {
   try {
     const { gameId } = req.params;
-    const { spectatorId, predictedTraitorIds } = req.body;
+    const { spectatorId, predictedTraitorIds, walletAddress } = req.body;
 
     if (!spectatorId || !predictedTraitorIds || !Array.isArray(predictedTraitorIds)) {
       return res.status(400).json({ error: 'spectatorId and predictedTraitorIds array required' });
+    }
+
+    // Validate wallet address if provided
+    if (walletAddress && !walletAddress.match(/^0x[a-fA-F0-9]{40}$/)) {
+      return res.status(400).json({ error: 'Invalid wallet address' });
     }
 
     if (predictedTraitorIds.length !== 2) {
@@ -1057,6 +1116,11 @@ router.post('/games/:gameId/predictions', async (req, res) => {
       return res.status(400).json({ error: 'Cannot predict on finished game' });
     }
 
+    // Only allow predictions during the first 3 rounds
+    if (state.currentRound > 3) {
+      return res.status(400).json({ error: 'Predictions are only allowed during the first 3 rounds' });
+    }
+
     // Verify predicted IDs are valid agents in this game
     const validIds = state.agents.map(a => a.agent_id);
     for (const id of predictedTraitorIds) {
@@ -1065,13 +1129,24 @@ router.post('/games/:gameId/predictions', async (req, res) => {
       }
     }
 
+    // Check if this wallet already predicted in this game
+    if (walletAddress) {
+      const existing = await db.query(
+        `SELECT id FROM predictions WHERE game_id = $1 AND wallet_address = $2 AND spectator_id != $3`,
+        [gameId, walletAddress, spectatorId]
+      );
+      if (existing.rows.length > 0) {
+        return res.status(400).json({ error: 'This wallet has already submitted a prediction for this game' });
+      }
+    }
+
     // Insert or update prediction
     await db.query(
-      `INSERT INTO predictions (game_id, spectator_id, predicted_traitor_ids)
-       VALUES ($1, $2, $3)
+      `INSERT INTO predictions (game_id, spectator_id, predicted_traitor_ids, wallet_address)
+       VALUES ($1, $2, $3, $4)
        ON CONFLICT (game_id, spectator_id) 
-       DO UPDATE SET predicted_traitor_ids = $3, created_at = NOW()`,
-      [gameId, spectatorId, predictedTraitorIds]
+       DO UPDATE SET predicted_traitor_ids = $3, wallet_address = $4, created_at = NOW()`,
+      [gameId, spectatorId, predictedTraitorIds, walletAddress || null]
     );
 
     res.json({ success: true, message: 'Prediction submitted!' });

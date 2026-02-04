@@ -196,6 +196,20 @@ const migrations = [
         ('grandmaster', 'Grandmaster', 'Reach 1800 ELO', '🏅', 'elo', 'elo_rating', 1800, 400, 'legendary')
       ON CONFLICT (id) DO NOTHING;
     `
+  },
+  {
+    name: 'add_wallet_to_predictions',
+    up: `
+      ALTER TABLE predictions ADD COLUMN IF NOT EXISTS wallet_address VARCHAR(42);
+      CREATE UNIQUE INDEX IF NOT EXISTS idx_predictions_wallet_game 
+        ON predictions(game_id, wallet_address) WHERE wallet_address IS NOT NULL;
+    `
+  },
+  {
+    name: 'add_webhook_url_column',
+    up: `
+      ALTER TABLE agents ADD COLUMN IF NOT EXISTS webhook_url TEXT;
+    `
   }
 ];
 
@@ -247,9 +261,3 @@ migrate().catch(err => {
   process.exit(1);
 });
 
-// Add webhook_url column migration
-const addWebhookColumn = async (client) => {
-  await client.query(`
-    ALTER TABLE agents ADD COLUMN IF NOT EXISTS webhook_url TEXT;
-  `);
-};
