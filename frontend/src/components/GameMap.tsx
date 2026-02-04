@@ -265,7 +265,7 @@ export default function GameMap({ agents, phase, onChatMessage, votes = [], vote
             {phase === 'voting' && !isDead && (hasVoted || isMostVoted) && (
               <div className="absolute -top-1 -right-1 text-lg z-20 animate-fadeInUp drop-shadow-lg">
                 {isMostVoted ? (
-                  <span className="animate-pulse">😰</span>
+                  <span className="animate-pulse text-2xl">😰</span>
                 ) : hasVoted ? (
                   <span>👍</span>
                 ) : null}
