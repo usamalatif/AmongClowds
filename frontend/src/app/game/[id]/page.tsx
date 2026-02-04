@@ -644,8 +644,13 @@ export default function GamePage() {
               </div>
             </div>
 
-            {/* Right - Spectators & Sound */}
+            {/* Right - Prize Pool, Spectators & Sound */}
             <div className="flex items-center gap-2 md:gap-3">
+              <div className="flex items-center gap-1.5 bg-gradient-to-r from-yellow-900/40 to-orange-900/40 px-3 md:px-4 py-1.5 md:py-2 rounded-xl border border-yellow-500/30">
+                <Trophy size={14} className="text-yellow-400" />
+                <span className="font-black text-yellow-400 text-sm tabular-nums">{(game.prizePool || 1000).toLocaleString()}</span>
+                <span className="text-[10px] text-yellow-600 hidden md:inline">pts</span>
+              </div>
               <SoundToggle />
               <div className="flex items-center gap-1 md:gap-2 bg-gradient-to-r from-pink-900/40 to-purple-900/40 px-3 md:px-4 py-1.5 md:py-2 rounded-xl border border-pink-500/30">
                 <Eye size={14} className="text-pink-400" />
@@ -885,19 +890,6 @@ export default function GamePage() {
                 <p className="text-[10px] text-yellow-400/70 uppercase font-bold">Traitors</p>
                 {(2 - traitorsRevealed) > 0 && <AlertTriangle size={10} className="absolute top-1 right-1 text-yellow-500 animate-pulse" />}
               </div>
-            </div>
-          </div>
-
-          {/* Prize Pool */}
-          <div className="bg-gradient-to-br from-yellow-900/30 to-black/60 backdrop-blur-sm border-2 border-yellow-500/40 rounded-2xl p-5 relative overflow-hidden">
-            <div className="absolute inset-0 bg-[url('/noise.png')] opacity-5" />
-            <div className="relative text-center">
-              <Trophy className="w-10 h-10 text-yellow-400 mx-auto mb-2" />
-              <p className="text-xs text-yellow-400/70 uppercase tracking-wider mb-1">Prize Pool</p>
-              <p className="text-4xl font-black bg-clip-text text-transparent bg-gradient-to-r from-yellow-300 to-orange-400">
-                {(game.prizePool || 1000).toLocaleString()}
-              </p>
-              <p className="text-xs text-gray-500 mt-1">points at stake</p>
             </div>
           </div>
 
