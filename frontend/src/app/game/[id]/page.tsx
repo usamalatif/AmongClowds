@@ -544,44 +544,10 @@ export default function GamePage() {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-900 via-slate-900 to-black text-white overflow-hidden">
-      {/* Phase-specific overlay */}
-      <div className={`fixed inset-0 pointer-events-none transition-all duration-1000 bg-gradient-to-b ${phase.overlay} to-transparent opacity-50`} />
-      
-      {/* Animated Background Orbs */}
-      <div className="fixed inset-0 overflow-hidden pointer-events-none">
-        <div className={`absolute top-0 left-1/4 w-[600px] h-[600px] rounded-full blur-3xl opacity-20 transition-all duration-1000 ${
-          game.currentPhase === 'murder' ? 'bg-red-600 animate-pulse' : 
-          game.currentPhase === 'discussion' ? 'bg-blue-600' : 
-          game.currentPhase === 'voting' ? 'bg-yellow-600' : 'bg-purple-600'
-        }`} />
-        <div className={`absolute bottom-0 right-1/4 w-[500px] h-[500px] rounded-full blur-3xl opacity-15 transition-all duration-1000 ${
-          game.currentPhase === 'murder' ? 'bg-orange-600' : 
-          game.currentPhase === 'discussion' ? 'bg-cyan-600' : 
-          game.currentPhase === 'voting' ? 'bg-amber-600' : 'bg-pink-600'
-        }`} />
-        {/* Extra danger pulse during murder */}
-        {game.currentPhase === 'murder' && (
-          <div className="absolute inset-0 bg-red-900/5 animate-pulse" />
-        )}
-      </div>
-
-      {/* Kill Feed / Event Log - Top Right */}
-      <div className="fixed top-20 right-4 z-40 w-72 hidden xl:block">
-        <div className="space-y-1.5">
-          {eventFeed.slice(-5).map((event) => (
-            <div 
-              key={event.id}
-              className={`text-xs px-3 py-2 rounded-lg backdrop-blur-sm border animate-slide-in-right ${
-                event.type === 'murder' ? 'bg-red-900/60 border-red-500/30 text-red-200' :
-                event.type === 'banish' ? 'bg-purple-900/60 border-purple-500/30 text-purple-200' :
-                event.type === 'vote' ? 'bg-yellow-900/40 border-yellow-500/20 text-yellow-200' :
-                event.type === 'disconnect' ? 'bg-gray-900/60 border-gray-500/30 text-gray-300' :
-                'bg-gray-900/40 border-gray-700/30 text-gray-300'
-              }`}
-            >
-              {event.text}
-            </div>
-          ))}
+      {/* Big Map at the top */}
+      <div className="relative z-10 max-w-7xl mx-auto px-2 md:px-4 pt-2">
+        <div className="w-full max-h-[45vh] overflow-hidden rounded-xl border border-gray-800">
+          <GameMap agents={game.agents} phase={game.currentPhase} onChatMessage={latestChatForMap} />
         </div>
       </div>
 
@@ -874,7 +840,6 @@ export default function GamePage() {
       {/* Mobile Tab Navigation */}
       <div className="lg:hidden flex border-b border-gray-800 bg-black/90 backdrop-blur-sm sticky top-0 z-40">
         {[
-          { id: 'map', label: 'Map', icon: Eye, count: 0 },
           { id: 'chat', label: 'Chat', icon: MessageCircle, count: chat.length },
           { id: 'players', label: 'Players', icon: Users, count: aliveAgents.length },
           { id: 'votes', label: 'Votes', icon: Vote, count: votes.length },
@@ -901,22 +866,11 @@ export default function GamePage() {
         ))}
       </div>
 
-      {/* Map Panel - Mobile */}
-      {mobileTab === 'map' && (
-        <div className="lg:hidden p-2">
-          <GameMap agents={game.agents} phase={game.currentPhase} onChatMessage={latestChatForMap} />
-        </div>
-      )}
-
       {/* Main Content */}
-      <div className="relative max-w-7xl mx-auto p-2 md:p-4 grid grid-cols-1 lg:grid-cols-12 gap-2 md:gap-4 h-[calc(100vh-100px)] lg:h-[calc(100vh-140px)]">
+      <div className="relative max-w-7xl mx-auto p-2 md:p-4 grid grid-cols-1 lg:grid-cols-12 gap-2 md:gap-4 h-[calc(100vh-55vh)] lg:h-[calc(100vh-55vh)]">
         
         {/* Left Sidebar - Hidden on mobile unless tab selected */}
         <div className={`lg:col-span-3 space-y-3 md:space-y-4 overflow-y-auto ${mobileTab !== 'players' ? 'hidden lg:block' : ''}`}>
-          {/* Map - Desktop */}
-          <div className="hidden lg:block">
-            <GameMap agents={game.agents} phase={game.currentPhase} onChatMessage={latestChatForMap} />
-          </div>
           {/* Battle Stats */}
           <div className="bg-black/60 backdrop-blur-sm border-2 border-purple-500/30 rounded-2xl p-4">
             <h3 className="text-xs text-gray-500 font-bold uppercase tracking-wider mb-3 flex items-center gap-2">

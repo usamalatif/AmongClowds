@@ -160,7 +160,7 @@ export default function GameMap({ agents, phase, onChatMessage }: GameMapProps) 
 
   // Animation loop: smoothly move agents toward targets, pick new targets when close
   useEffect(() => {
-    const SPEED = 0.8; // % per second
+    const SPEED = 0.25; // % per second — slow gentle roaming
     
     const animate = (time: number) => {
       const delta = lastUpdateRef.current ? (time - lastUpdateRef.current) / 1000 : 0.016;
