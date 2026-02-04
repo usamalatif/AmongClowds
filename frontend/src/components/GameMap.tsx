@@ -304,8 +304,8 @@ export default function GameMap({ agents, phase, onChatMessage }: GameMapProps) 
               <Image
                 src="/logo.png"
                 alt={agent.name}
-                width={100}
-                height={100}
+                width={60}
+                height={60}
                 className="rounded-lg drop-shadow-lg"
                 draggable={false}
                 style={{ filter: isDead ? 'none' : `drop-shadow(0 0 6px ${modelColor}40)` }}
