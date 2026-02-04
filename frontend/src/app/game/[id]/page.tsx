@@ -10,6 +10,7 @@ import { soundManager } from '@/lib/sounds';
 import SoundToggle from '@/components/SoundToggle';
 import ShareButtons from '@/components/ShareButtons';
 import AgentAvatar from '@/components/AgentAvatar';
+import GameMap from '@/components/GameMap';
 import confetti from 'canvas-confetti';
 
 interface Agent {
@@ -118,6 +119,8 @@ export default function GamePage() {
   const [clipHintDismissed, setClipHintDismissed] = useState(true); // default true, check localStorage in useEffect
   
   const [newAchievements, setNewAchievements] = useState<Array<{ id: string; name: string; icon: string; description: string; rarity: string; agentName: string }>>([]);
+  
+  const [latestChatForMap, setLatestChatForMap] = useState<{ agentId: string; agentName: string; message: string; timestamp: number } | null>(null);
 
   // Add event to kill feed (auto-remove after 3s)
   const addEvent = useCallback((type: GameEvent['type'], text: string) => {
@@ -174,6 +177,7 @@ export default function GamePage() {
 
     newSocket.on('chat_message', (msg: ChatMessage) => {
       setChat(prev => [...prev.slice(-199), { ...msg, reactions: {} }]);
+      setLatestChatForMap({ agentId: msg.agentId, agentName: msg.agentName, message: msg.message, timestamp: Date.now() });
       soundManager.chatMessage();
     });
 
@@ -870,6 +874,7 @@ export default function GamePage() {
       {/* Mobile Tab Navigation */}
       <div className="lg:hidden flex border-b border-gray-800 bg-black/90 backdrop-blur-sm sticky top-0 z-40">
         {[
+          { id: 'map', label: 'Map', icon: Eye, count: 0 },
           { id: 'chat', label: 'Chat', icon: MessageCircle, count: chat.length },
           { id: 'players', label: 'Players', icon: Users, count: aliveAgents.length },
           { id: 'votes', label: 'Votes', icon: Vote, count: votes.length },
@@ -896,11 +901,22 @@ export default function GamePage() {
         ))}
       </div>
 
+      {/* Map Panel - Mobile */}
+      {mobileTab === 'map' && (
+        <div className="lg:hidden p-2">
+          <GameMap agents={game.agents} phase={game.currentPhase} onChatMessage={latestChatForMap} />
+        </div>
+      )}
+
       {/* Main Content */}
       <div className="relative max-w-7xl mx-auto p-2 md:p-4 grid grid-cols-1 lg:grid-cols-12 gap-2 md:gap-4 h-[calc(100vh-100px)] lg:h-[calc(100vh-140px)]">
         
         {/* Left Sidebar - Hidden on mobile unless tab selected */}
         <div className={`lg:col-span-3 space-y-3 md:space-y-4 overflow-y-auto ${mobileTab !== 'players' ? 'hidden lg:block' : ''}`}>
+          {/* Map - Desktop */}
+          <div className="hidden lg:block">
+            <GameMap agents={game.agents} phase={game.currentPhase} onChatMessage={latestChatForMap} />
+          </div>
           {/* Battle Stats */}
           <div className="bg-black/60 backdrop-blur-sm border-2 border-purple-500/30 rounded-2xl p-4">
             <h3 className="text-xs text-gray-500 font-bold uppercase tracking-wider mb-3 flex items-center gap-2">
