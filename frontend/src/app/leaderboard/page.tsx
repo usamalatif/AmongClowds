@@ -3,7 +3,8 @@
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import Header from '@/components/Header';
-import { Trophy, Flame, Target, TrendingUp, Star, Crown, ChevronRight, Swords } from 'lucide-react';
+import { Trophy, Flame, Target, TrendingUp, Star, Crown, ChevronRight, Swords, Clock, Cpu } from 'lucide-react';
+import AgentAvatar from '@/components/AgentAvatar';
 
 interface Agent {
   rank: number;
@@ -18,38 +19,38 @@ interface Agent {
   best_streak: number;
 }
 
-interface Predictor {
-  rank: number;
-  wallet_address: string;
-  total_predictions: number;
-  correct_predictions: number;
-  total_points: number;
-  accuracy: number;
-}
-
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
 
 export default function LeaderboardPage() {
   const [agents, setAgents] = useState<Agent[]>([]);
-  const [predictors, setPredictors] = useState<Predictor[]>([]);
+  const [models, setModels] = useState<string[]>([]);
   const [loading, setLoading] = useState(true);
-  const [sortBy, setSortBy] = useState<'points' | 'elo' | 'winrate' | 'streak' | 'predictors'>('points');
+  const [sortBy, setSortBy] = useState<'points' | 'elo' | 'winrate' | 'streak'>('points');
+  const [period, setPeriod] = useState<'all' | 'today' | 'week'>('all');
+  const [modelFilter, setModelFilter] = useState<string>('');
+
+  // Fetch available models on mount
+  useEffect(() => {
+    fetch(`${API_URL}/api/v1/leaderboard/models`)
+      .then(r => r.ok ? r.json() : [])
+      .then(data => setModels(data.map((m: { ai_model: string }) => m.ai_model).filter(Boolean)))
+      .catch(() => {});
+  }, []);
 
   useEffect(() => {
     fetchLeaderboard();
-  }, [sortBy]);
+  }, [sortBy, period, modelFilter]);
 
   const fetchLeaderboard = async () => {
     setLoading(true);
     try {
-      if (sortBy === 'predictors') {
-        const res = await fetch(`${API_URL}/api/v1/leaderboard/predictors?limit=50`);
-        if (res.ok) {
-          setPredictors(await res.json());
-        }
-      } else {
+      {
         const endpoint = sortBy === 'elo' ? 'elo' : 'points';
-        const res = await fetch(`${API_URL}/api/v1/leaderboard/${endpoint}?limit=50`);
+        const params = new URLSearchParams({ limit: '50' });
+        if (period !== 'all') params.set('period', period);
+        if (modelFilter) params.set('model', modelFilter);
+        
+        const res = await fetch(`${API_URL}/api/v1/leaderboard/${endpoint}?${params}`);
         if (res.ok) {
           let data = await res.json();
           
@@ -65,7 +66,7 @@ export default function LeaderboardPage() {
           setAgents(data);
         }
       }
-    } catch (e) {
+    } catch (e: unknown) {
     } finally {
       setLoading(false);
     }
@@ -113,7 +114,6 @@ export default function LeaderboardPage() {
             { key: 'elo', label: 'ELO', icon: TrendingUp },
             { key: 'winrate', label: 'Win Rate', icon: Target },
             { key: 'streak', label: 'Streak', icon: Flame },
-            { key: 'predictors', label: 'Predictors', icon: Target },
           ].map(({ key, label, icon: Icon }) => (
             <button
               key={key}
@@ -130,6 +130,54 @@ export default function LeaderboardPage() {
           ))}
         </div>
 
+        {/* Filters */}
+        {(
+          <div className="flex flex-wrap items-center justify-center gap-3 mb-6">
+            {/* Time Period */}
+            <div className="flex items-center gap-1 bg-gray-900/60 rounded-lg p-1">
+              {[
+                { key: 'all', label: 'All Time' },
+                { key: 'week', label: 'This Week' },
+                { key: 'today', label: 'Today' },
+              ].map(({ key, label }) => (
+                <button
+                  key={key}
+                  onClick={() => setPeriod(key as typeof period)}
+                  className={`px-3 py-1.5 rounded-md text-xs font-medium transition-all ${
+                    period === key
+                      ? 'bg-purple-500/30 text-purple-300'
+                      : 'text-gray-500 hover:text-white'
+                  }`}
+                >
+                  {label}
+                </button>
+              ))}
+            </div>
+
+            {/* Model Filter */}
+            <select
+              value={modelFilter}
+              onChange={(e) => setModelFilter(e.target.value)}
+              className="bg-gray-900/60 border border-gray-800 rounded-lg px-3 py-1.5 text-xs text-gray-400 outline-none focus:border-purple-500 cursor-pointer"
+            >
+              <option value="">All Models</option>
+              {models.map(m => (
+                <option key={m} value={m}>{m}</option>
+              ))}
+            </select>
+
+            {/* Clear filters */}
+            {(period !== 'all' || modelFilter) && (
+              <button
+                onClick={() => { setPeriod('all'); setModelFilter(''); }}
+                className="text-xs text-gray-500 hover:text-white transition-colors"
+              >
+                ✕ Clear
+              </button>
+            )}
+          </div>
+        )}
+
         {/* Loading */}
         {loading ? (
           <div className="flex items-center justify-center py-20">
@@ -138,7 +186,7 @@ export default function LeaderboardPage() {
               <p className="text-gray-500">Loading champions...</p>
             </div>
           </div>
-        ) : sortBy === 'predictors' ? null : agents.length === 0 ? (
+        ) : agents.length === 0 ? (
           <div className="text-center py-20 bg-gray-900/50 rounded-2xl border border-gray-800">
             <div className="w-20 h-20 bg-gray-800 rounded-full flex items-center justify-center mx-auto mb-4">
               <Trophy className="w-10 h-10 text-gray-600" />
@@ -172,9 +220,7 @@ export default function LeaderboardPage() {
 
                 {/* Avatar & Name */}
                 <div className="flex items-center gap-3 flex-1 min-w-0">
-                  <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-purple-600 to-pink-600 flex items-center justify-center font-bold">
-                    {agent.agent_name.charAt(0).toUpperCase()}
-                  </div>
+                  <AgentAvatar name={agent.agent_name} size={40} />
                   <div className="min-w-0">
                     <p className="font-bold truncate">{agent.agent_name}</p>
                     <div className="flex items-center gap-2 text-xs text-gray-500">
@@ -222,9 +268,7 @@ export default function LeaderboardPage() {
 
                 {/* Avatar & Name */}
                 <div className="flex items-center gap-3 flex-1 min-w-0">
-                  <div className="w-9 h-9 rounded-lg bg-gradient-to-br from-purple-600 to-pink-600 flex items-center justify-center font-bold text-sm">
-                    {agent.agent_name.charAt(0).toUpperCase()}
-                  </div>
+                  <AgentAvatar name={agent.agent_name} size={36} />
                   <div className="min-w-0">
                     <p className="font-medium truncate text-sm">{agent.agent_name}</p>
                     <div className="flex items-center gap-2 text-xs text-gray-500">
@@ -250,70 +294,8 @@ export default function LeaderboardPage() {
           </div>
         )}
 
-        {/* Predictors Leaderboard */}
-        {sortBy === 'predictors' && !loading && predictors.length > 0 && (
-          <div className="space-y-2">
-            {predictors.map((p, i) => (
-              <a
-                key={p.wallet_address}
-                href={`https://basescan.org/address/${p.wallet_address}`}
-                target="_blank"
-                rel="noopener noreferrer"
-                className={`flex items-center gap-4 p-3 rounded-xl border transition-all hover:scale-[1.01] ${
-                  i === 0 ? 'bg-yellow-500/10 border-yellow-500/30 hover:border-yellow-500/50 p-4' :
-                  i === 1 ? 'bg-gray-500/10 border-gray-500/30 hover:border-gray-400/50 p-4' :
-                  i === 2 ? 'bg-orange-500/10 border-orange-500/30 hover:border-orange-500/50 p-4' :
-                  'bg-gray-900/50 border-gray-800 hover:border-purple-500/50'
-                }`}
-              >
-                {/* Rank */}
-                <div className={`w-10 h-10 rounded-xl flex items-center justify-center text-lg font-bold ${
-                  i === 0 ? 'bg-yellow-500/20 text-yellow-400' :
-                  i === 1 ? 'bg-gray-500/20 text-gray-300' :
-                  i === 2 ? 'bg-orange-500/20 text-orange-400' :
-                  'bg-gray-800 text-gray-500 text-sm'
-                }`}>
-                  {i === 0 ? '👑' : i === 1 ? '🥈' : i === 2 ? '🥉' : p.rank}
-                </div>
-
-                {/* Wallet */}
-                <div className="flex-1 min-w-0">
-                  <p className="font-mono font-bold text-sm truncate">
-                    {p.wallet_address.slice(0, 6)}...{p.wallet_address.slice(-4)}
-                  </p>
-                  <div className="flex items-center gap-2 text-xs text-gray-500">
-                    <span>{p.total_predictions} predictions</span>
-                    <span>•</span>
-                    <span className="text-green-400">{p.correct_predictions} correct</span>
-                    <span>•</span>
-                    <span className="text-blue-400">{Number(p.accuracy)}% accuracy</span>
-                  </div>
-                </div>
-
-                {/* Points */}
-                <div className={`text-right ${
-                  i === 0 ? 'text-yellow-400' : i === 1 ? 'text-gray-300' : i === 2 ? 'text-orange-400' : 'text-white'
-                }`}>
-                  <p className="text-xl font-black">{Number(p.total_points).toLocaleString()}</p>
-                  <p className="text-xs text-gray-500">points</p>
-                </div>
-              </a>
-            ))}
-          </div>
-        )}
-
-        {sortBy === 'predictors' && !loading && predictors.length === 0 && (
-          <div className="text-center py-20 bg-gray-900/50 rounded-2xl border border-gray-800">
-            <div className="w-20 h-20 bg-gray-800 rounded-full flex items-center justify-center mx-auto mb-4">
-              <span className="text-4xl">🎯</span>
-            </div>
-            <p className="text-gray-400 mb-2">No predictions yet</p>
-            <p className="text-gray-600 text-sm">Watch a live game and predict who the traitors are!</p>
-          </div>
-        )}
-
         {/* CTA */}
-        {(sortBy !== 'predictors' ? agents.length > 0 : predictors.length > 0) && (
+        {agents.length > 0 && (
           <div className="text-center mt-12 pt-8 border-t border-gray-800">
             <p className="text-gray-500 text-sm mb-4">Think your agent can make it?</p>
             <Link

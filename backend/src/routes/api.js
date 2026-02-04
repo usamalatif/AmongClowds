@@ -263,6 +263,282 @@ router.get('/agents/name/:name/games', async (req, res) => {
   }
 });
 
+// ========== MODEL BATTLES ==========
+
+// Get model-level aggregate stats
+router.get('/models/stats', async (req, res) => {
+  try {
+    // Aggregate stats per model
+    const modelsResult = await db.query(
+      `SELECT ai_model,
+              COUNT(*) as agent_count,
+              SUM(total_games) as total_games,
+              SUM(games_won) as total_wins,
+              ROUND(AVG(elo_rating)) as avg_elo,
+              MAX(elo_rating) as top_elo,
+              SUM(games_as_traitor) as traitor_games,
+              SUM(traitor_wins) as traitor_wins,
+              SUM(games_as_innocent) as innocent_games,
+              SUM(innocent_wins) as innocent_wins,
+              MAX(best_streak) as best_streak
+       FROM agents
+       WHERE total_games > 0
+       GROUP BY ai_model
+       ORDER BY CASE WHEN SUM(total_games) > 0 THEN SUM(games_won)::numeric / SUM(total_games) ELSE 0 END DESC`
+    );
+
+    res.json(modelsResult.rows);
+  } catch (error) {
+    console.error('Failed to get model stats:', error);
+    res.status(500).json({ error: 'Failed to get model stats' });
+  }
+});
+
+// Head-to-head between two models
+router.get('/models/battle/:model1/:model2', async (req, res) => {
+  try {
+    const model1 = decodeURIComponent(req.params.model1);
+    const model2 = decodeURIComponent(req.params.model2);
+
+    // Get games where agents from model1 faced agents from model2
+    // A "win" for a model = any agent of that model won
+    const result = await db.query(
+      `SELECT g.id, g.winner,
+              ga1.agent_id as a1_id, ga1.role as a1_role, ga1.status as a1_status, a1.agent_name as a1_name,
+              ga2.agent_id as a2_id, ga2.role as a2_role, ga2.status as a2_status, a2.agent_name as a2_name,
+              g.finished_at
+       FROM games g
+       JOIN game_agents ga1 ON g.id = ga1.game_id
+       JOIN agents a1 ON ga1.agent_id = a1.id AND a1.ai_model = $1
+       JOIN game_agents ga2 ON g.id = ga2.game_id
+       JOIN agents a2 ON ga2.agent_id = a2.id AND a2.ai_model = $2
+       WHERE g.status = 'finished'
+       ORDER BY g.finished_at DESC NULLS LAST`,
+      [model1, model2]
+    );
+
+    // Deduplicate by game (multiple agents of same model in one game)
+    const gameMap = new Map();
+    for (const row of result.rows) {
+      if (!gameMap.has(row.id)) {
+        gameMap.set(row.id, { id: row.id, winner: row.winner, finishedAt: row.finished_at, model1Agents: [], model2Agents: [] });
+      }
+      const game = gameMap.get(row.id);
+      const a1Entry = { name: row.a1_name, role: row.a1_role, status: row.a1_status };
+      const a2Entry = { name: row.a2_name, role: row.a2_role, status: row.a2_status };
+      if (!game.model1Agents.find((a) => a.name === a1Entry.name)) game.model1Agents.push(a1Entry);
+      if (!game.model2Agents.find((a) => a.name === a2Entry.name)) game.model2Agents.push(a2Entry);
+    }
+
+    const games = Array.from(gameMap.values());
+    let model1Wins = 0, model2Wins = 0, draws = 0;
+
+    for (const g of games) {
+      const m1Won = g.model1Agents.some((a) =>
+        (g.winner === 'innocents' && a.role === 'innocent') || (g.winner === 'traitors' && a.role === 'traitor')
+      );
+      const m2Won = g.model2Agents.some((a) =>
+        (g.winner === 'innocents' && a.role === 'innocent') || (g.winner === 'traitors' && a.role === 'traitor')
+      );
+      if (m1Won && !m2Won) model1Wins++;
+      else if (m2Won && !m1Won) model2Wins++;
+      else draws++;
+    }
+
+    res.json({
+      model1,
+      model2,
+      totalGames: games.length,
+      model1Wins,
+      model2Wins,
+      draws,
+      recentGames: games.slice(0, 10).map(g => ({
+        gameId: g.id,
+        winner: g.winner,
+        finishedAt: g.finishedAt,
+        model1Agents: g.model1Agents,
+        model2Agents: g.model2Agents,
+      }))
+    });
+  } catch (error) {
+    console.error('Failed to get model battle:', error);
+    res.status(500).json({ error: 'Failed to get model battle data' });
+  }
+});
+
+// ========== RIVALRIES ==========
+
+// Head-to-head rivalry between two agents
+router.get('/agents/rivalry/:name1/:name2', async (req, res) => {
+  try {
+    const { name1, name2 } = req.params;
+
+    // Get both agents
+    const agentsResult = await db.query(
+      `SELECT id, agent_name, ai_model, elo_rating, total_games, games_won
+       FROM agents WHERE agent_name IN ($1, $2)`,
+      [name1, name2]
+    );
+
+    if (agentsResult.rows.length < 2) {
+      return res.status(404).json({ error: 'One or both agents not found' });
+    }
+
+    const agent1 = agentsResult.rows.find(a => a.agent_name === name1);
+    const agent2 = agentsResult.rows.find(a => a.agent_name === name2);
+
+    if (!agent1 || !agent2) {
+      return res.status(404).json({ error: 'One or both agents not found' });
+    }
+
+    // Get all games they played TOGETHER
+    const sharedGames = await db.query(
+      `SELECT g.id, g.winner, g.current_round as rounds, g.finished_at,
+              ga1.role as role1, ga1.status as status1,
+              ga2.role as role2, ga2.status as status2
+       FROM games g
+       JOIN game_agents ga1 ON g.id = ga1.game_id AND ga1.agent_id = $1
+       JOIN game_agents ga2 ON g.id = ga2.game_id AND ga2.agent_id = $2
+       WHERE g.status = 'finished'
+       ORDER BY g.finished_at DESC NULLS LAST`,
+      [agent1.id, agent2.id]
+    );
+
+    const games = sharedGames.rows;
+    const totalGames = games.length;
+
+    if (totalGames === 0) {
+      return res.json({
+        agent1: { name: agent1.agent_name, model: agent1.ai_model, elo: agent1.elo_rating, totalGames: agent1.total_games, gamesWon: agent1.games_won },
+        agent2: { name: agent2.agent_name, model: agent2.ai_model, elo: agent2.elo_rating, totalGames: agent2.total_games, gamesWon: agent2.games_won },
+        totalGames: 0,
+        wins1: 0, wins2: 0,
+        sameTeam: 0, oppositeTeam: 0,
+        kills: { agent1Killed2: 0, agent2Killed1: 0 },
+        votes: { agent1Voted2: 0, agent2Voted1: 0 },
+        recentGames: [],
+        streaks: { current: null, best1: 0, best2: 0 }
+      });
+    }
+
+    // Calculate win records
+    let wins1 = 0, wins2 = 0;
+    let sameTeam = 0, oppositeTeam = 0;
+
+    for (const g of games) {
+      const won1 = (g.winner === 'innocents' && g.role1 === 'innocent') || (g.winner === 'traitors' && g.role1 === 'traitor');
+      const won2 = (g.winner === 'innocents' && g.role2 === 'innocent') || (g.winner === 'traitors' && g.role2 === 'traitor');
+      if (won1) wins1++;
+      if (won2) wins2++;
+      if (g.role1 === g.role2) sameTeam++;
+      else oppositeTeam++;
+    }
+
+    // Get votes between the two agents across shared games
+    const gameIds = games.map(g => g.id);
+    const votesResult = await db.query(
+      `SELECT voter_id, target_id, game_id, round
+       FROM votes
+       WHERE game_id = ANY($1)
+         AND ((voter_id = $2 AND target_id = $3) OR (voter_id = $3 AND target_id = $2))`,
+      [gameIds, agent1.id, agent2.id]
+    );
+
+    let agent1Voted2 = 0, agent2Voted1 = 0;
+    for (const v of votesResult.rows) {
+      if (v.voter_id === agent1.id) agent1Voted2++;
+      else agent2Voted1++;
+    }
+
+    // Get murders between the two (from game_events)
+    const killsResult = await db.query(
+      `SELECT ge.data, ge.game_id, ga_killer.agent_id as killer_id
+       FROM game_events ge
+       JOIN game_agents ga_killer ON ga_killer.game_id = ge.game_id AND ga_killer.role = 'traitor'
+       WHERE ge.game_id = ANY($1::uuid[])
+         AND ge.event_type = 'murder'
+         AND (
+           (ge.data::jsonb->>'victim' = $2::text AND ga_killer.agent_id = $3::uuid)
+           OR (ge.data::jsonb->>'victim' = $3::text AND ga_killer.agent_id = $2::uuid)
+         )`,
+      [gameIds, agent1.id, agent2.id]
+    );
+
+    let agent1Killed2 = 0, agent2Killed1 = 0;
+    for (const k of killsResult.rows) {
+      if (k.killer_id === agent1.id) agent1Killed2++;
+      else agent2Killed1++;
+    }
+
+    // Calculate streaks
+    let currentStreak = null, currentCount = 0;
+    let best1 = 0, best2 = 0, streak1 = 0, streak2 = 0;
+    
+    // Games are already ordered DESC, reverse for chronological streak calc
+    const chronological = [...games].reverse();
+    for (const g of chronological) {
+      const won1 = (g.winner === 'innocents' && g.role1 === 'innocent') || (g.winner === 'traitors' && g.role1 === 'traitor');
+      const won2 = (g.winner === 'innocents' && g.role2 === 'innocent') || (g.winner === 'traitors' && g.role2 === 'traitor');
+      
+      if (won1 && !won2) { streak1++; streak2 = 0; }
+      else if (won2 && !won1) { streak2++; streak1 = 0; }
+      else { streak1 = 0; streak2 = 0; }
+      
+      if (streak1 > best1) best1 = streak1;
+      if (streak2 > best2) best2 = streak2;
+    }
+
+    // Current streak from most recent games
+    for (const g of games) {
+      const won1 = (g.winner === 'innocents' && g.role1 === 'innocent') || (g.winner === 'traitors' && g.role1 === 'traitor');
+      const won2 = (g.winner === 'innocents' && g.role2 === 'innocent') || (g.winner === 'traitors' && g.role2 === 'traitor');
+      
+      if (currentStreak === null) {
+        if (won1 && !won2) { currentStreak = name1; currentCount = 1; }
+        else if (won2 && !won1) { currentStreak = name2; currentCount = 1; }
+        else break;
+      } else if (currentStreak === name1 && won1 && !won2) { currentCount++; }
+      else if (currentStreak === name2 && won2 && !won1) { currentCount++; }
+      else break;
+    }
+
+    // Recent games (last 10)
+    const recentGames = games.slice(0, 10).map(g => ({
+      gameId: g.id,
+      winner: g.winner,
+      rounds: g.rounds,
+      finishedAt: g.finished_at,
+      role1: g.role1,
+      status1: g.status1,
+      role2: g.role2,
+      status2: g.status2,
+      won1: (g.winner === 'innocents' && g.role1 === 'innocent') || (g.winner === 'traitors' && g.role1 === 'traitor'),
+      won2: (g.winner === 'innocents' && g.role2 === 'innocent') || (g.winner === 'traitors' && g.role2 === 'traitor'),
+    }));
+
+    res.json({
+      agent1: { name: agent1.agent_name, model: agent1.ai_model, elo: agent1.elo_rating, totalGames: agent1.total_games, gamesWon: agent1.games_won },
+      agent2: { name: agent2.agent_name, model: agent2.ai_model, elo: agent2.elo_rating, totalGames: agent2.total_games, gamesWon: agent2.games_won },
+      totalGames,
+      wins1,
+      wins2,
+      sameTeam,
+      oppositeTeam,
+      kills: { agent1Killed2, agent2Killed1 },
+      votes: { agent1Voted2, agent2Voted1 },
+      recentGames,
+      streaks: {
+        current: currentStreak ? { agent: currentStreak, count: currentCount } : null,
+        best1,
+        best2
+      }
+    });
+  } catch (error) {
+    console.error('Failed to get rivalry:', error);
+    res.status(500).json({ error: 'Failed to get rivalry data' });
+  }
+});
+
 // ========== LOBBY ==========
 
 router.post('/lobby/join', authenticateAgent, async (req, res) => {
@@ -522,6 +798,115 @@ router.get('/games/history', async (req, res) => {
   } catch (error) {
     console.error('History error:', error);
     res.status(500).json({ error: 'Failed to get game history' });
+  }
+});
+
+// ========== GAME CHAT & CLIPS ==========
+
+// Get chat messages for a game (from database — persisted forever)
+router.get('/games/:gameId/chat', async (req, res) => {
+  try {
+    const { gameId } = req.params;
+    const limit = Math.min(parseInt(req.query.limit) || 500, 1000);
+    const offset = parseInt(req.query.offset) || 0;
+
+    const result = await db.query(
+      `SELECT cm.id, cm.agent_id, a.agent_name, a.ai_model, cm.message, cm.channel, cm.created_at
+       FROM chat_messages cm
+       JOIN agents a ON cm.agent_id = a.id
+       WHERE cm.game_id = $1 AND cm.channel = 'general'
+       ORDER BY cm.created_at ASC
+       LIMIT $2 OFFSET $3`,
+      [gameId, limit, offset]
+    );
+
+    // Get total count
+    const countResult = await db.query(
+      `SELECT COUNT(*) FROM chat_messages WHERE game_id = $1 AND channel = 'general'`,
+      [gameId]
+    );
+
+    res.json({
+      messages: result.rows,
+      total: parseInt(countResult.rows[0].count),
+      offset,
+      limit
+    });
+  } catch (error) {
+    console.error('Get chat error:', error);
+    res.status(500).json({ error: 'Failed to get chat messages' });
+  }
+});
+
+// Get clip data — specific range of messages for sharing
+router.get('/games/:gameId/clip', async (req, res) => {
+  try {
+    const { gameId } = req.params;
+    const from = parseInt(req.query.from);
+    const to = parseInt(req.query.to);
+
+    if (isNaN(from) || isNaN(to) || from < 0 || to < from || (to - from) > 20) {
+      return res.status(400).json({ error: 'Invalid range. Max 20 messages per clip.' });
+    }
+
+    // Get the messages in range
+    const messagesResult = await db.query(
+      `SELECT cm.id, cm.agent_id, a.agent_name, a.ai_model, cm.message, cm.channel, cm.created_at,
+              ROW_NUMBER() OVER (ORDER BY cm.created_at ASC) - 1 as msg_index
+       FROM chat_messages cm
+       JOIN agents a ON cm.agent_id = a.id
+       WHERE cm.game_id = $1 AND cm.channel = 'general'
+       ORDER BY cm.created_at ASC`,
+      [gameId]
+    );
+
+    const allMessages = messagesResult.rows;
+    const clippedMessages = allMessages.filter(m => {
+      const idx = parseInt(m.msg_index);
+      return idx >= from && idx <= to;
+    });
+
+    if (clippedMessages.length === 0) {
+      return res.status(404).json({ error: 'No messages found in range' });
+    }
+
+    // Get game info
+    const gameResult = await db.query(
+      `SELECT id, status, winner, current_round, created_at, finished_at
+       FROM games WHERE id = $1`,
+      [gameId]
+    );
+
+    if (gameResult.rows.length === 0) {
+      return res.status(404).json({ error: 'Game not found' });
+    }
+
+    // Get agents for context
+    const agentsResult = await db.query(
+      `SELECT ga.agent_id, ga.role, ga.status, a.agent_name, a.ai_model
+       FROM game_agents ga
+       JOIN agents a ON ga.agent_id = a.id
+       WHERE ga.game_id = $1`,
+      [gameId]
+    );
+
+    res.json({
+      game: gameResult.rows[0],
+      agents: agentsResult.rows,
+      messages: clippedMessages.map(m => ({
+        id: m.id,
+        agent_id: m.agent_id,
+        agent_name: m.agent_name,
+        ai_model: m.ai_model,
+        message: m.message,
+        created_at: m.created_at
+      })),
+      range: { from, to },
+      totalMessages: allMessages.length
+    });
+  } catch (error) {
+    console.error('Get clip error:', error);
+    res.status(500).json({ error: 'Failed to get clip' });
   }
 });
 
@@ -941,19 +1326,38 @@ router.post('/game/:id/vent', authenticateAgent, async (req, res) => {
 router.get('/leaderboard/points', async (req, res) => {
   try {
     const limit = parseInt(req.query.limit) || 50;
+    const { period, model } = req.query;
+
+    // Time filter
+    let timeFilter = '';
+    if (period === 'today') {
+      timeFilter = `AND a.id IN (SELECT DISTINCT ga.agent_id FROM game_agents ga JOIN games g ON g.id = ga.game_id WHERE g.finished_at >= NOW() - INTERVAL '1 day')`;
+    } else if (period === 'week') {
+      timeFilter = `AND a.id IN (SELECT DISTINCT ga.agent_id FROM game_agents ga JOIN games g ON g.id = ga.game_id WHERE g.finished_at >= NOW() - INTERVAL '7 days')`;
+    }
+
+    // Model filter
+    let modelFilter = '';
+    const params = [limit];
+    if (model) {
+      modelFilter = `AND a.ai_model ILIKE $2`;
+      params.push(`%${model}%`);
+    }
+
     const result = await db.query(
-      `SELECT id, agent_name, ai_model, unclaimed_points +
-              (SELECT COALESCE(SUM(points_amount), 0) FROM token_claims WHERE agent_id = agents.id AND status = 'completed') as total_points,
-              elo_rating, total_games, games_won, current_streak, best_streak,
-              CASE WHEN total_games > 0 THEN ROUND(games_won::numeric / total_games * 100) ELSE 0 END as win_rate
-       FROM agents
+      `SELECT a.id, a.agent_name, a.ai_model, a.unclaimed_points +
+              (SELECT COALESCE(SUM(points_amount), 0) FROM token_claims WHERE agent_id = a.id AND status = 'completed') as total_points,
+              a.elo_rating, a.total_games, a.games_won, a.current_streak, a.best_streak,
+              CASE WHEN a.total_games > 0 THEN ROUND(a.games_won::numeric / a.total_games * 100) ELSE 0 END as win_rate
+       FROM agents a
+       WHERE 1=1 ${timeFilter} ${modelFilter}
        ORDER BY 
-         total_games > 0 DESC,
-         unclaimed_points DESC,
-         CASE WHEN total_games > 0 THEN games_won::numeric / total_games ELSE 0 END DESC,
-         games_won DESC
+         a.total_games > 0 DESC,
+         a.unclaimed_points DESC,
+         CASE WHEN a.total_games > 0 THEN a.games_won::numeric / a.total_games ELSE 0 END DESC,
+         a.games_won DESC
        LIMIT $1`,
-      [limit]
+      params
     );
 
     res.json(result.rows.map((row, i) => ({
@@ -961,6 +1365,7 @@ router.get('/leaderboard/points', async (req, res) => {
       ...row
     })));
   } catch (error) {
+    console.error('Points leaderboard error:', error);
     res.status(500).json({ error: 'Failed to get leaderboard' });
   }
 });
@@ -968,16 +1373,32 @@ router.get('/leaderboard/points', async (req, res) => {
 router.get('/leaderboard/elo', async (req, res) => {
   try {
     const limit = parseInt(req.query.limit) || 50;
+    const { period, model } = req.query;
+
+    let timeFilter = '';
+    if (period === 'today') {
+      timeFilter = `AND a.id IN (SELECT DISTINCT ga.agent_id FROM game_agents ga JOIN games g ON g.id = ga.game_id WHERE g.finished_at >= NOW() - INTERVAL '1 day')`;
+    } else if (period === 'week') {
+      timeFilter = `AND a.id IN (SELECT DISTINCT ga.agent_id FROM game_agents ga JOIN games g ON g.id = ga.game_id WHERE g.finished_at >= NOW() - INTERVAL '7 days')`;
+    }
+
+    let modelFilter = '';
+    const params = [limit];
+    if (model) {
+      modelFilter = `AND a.ai_model ILIKE $2`;
+      params.push(`%${model}%`);
+    }
+
     const result = await db.query(
-      `SELECT id, agent_name, ai_model, 
-              unclaimed_points + (SELECT COALESCE(SUM(points_amount), 0) FROM token_claims WHERE agent_id = agents.id AND status = 'completed') as total_points,
-              elo_rating, total_games, games_won, current_streak, best_streak,
-              CASE WHEN total_games > 0 THEN ROUND(games_won::numeric / total_games * 100) ELSE 0 END as win_rate
-       FROM agents
-       WHERE total_games >= 5
-       ORDER BY elo_rating DESC
+      `SELECT a.id, a.agent_name, a.ai_model, 
+              a.unclaimed_points + (SELECT COALESCE(SUM(points_amount), 0) FROM token_claims WHERE agent_id = a.id AND status = 'completed') as total_points,
+              a.elo_rating, a.total_games, a.games_won, a.current_streak, a.best_streak,
+              CASE WHEN a.total_games > 0 THEN ROUND(a.games_won::numeric / a.total_games * 100) ELSE 0 END as win_rate
+       FROM agents a
+       WHERE a.total_games >= 5 ${timeFilter} ${modelFilter}
+       ORDER BY a.elo_rating DESC
        LIMIT $1`,
-      [limit]
+      params
     );
 
     res.json(result.rows.map((row, i) => ({
@@ -1023,18 +1444,19 @@ router.get('/leaderboard/predictors', async (req, res) => {
     const limit = parseInt(req.query.limit) || 50;
     const result = await db.query(
       `SELECT 
-        wallet_address,
-        COUNT(*) as total_predictions,
-        COUNT(CASE WHEN is_correct = true THEN 1 END) as correct_predictions,
-        SUM(COALESCE(points_earned, 0)) as total_points,
-        CASE WHEN COUNT(*) > 0 
-          THEN ROUND((COUNT(CASE WHEN is_correct = true THEN 1 END)::numeric / COUNT(*)) * 100) 
+        s.name,
+        s.wallet_address,
+        s.total_points,
+        s.total_predictions,
+        s.correct_predictions,
+        CASE WHEN s.total_predictions > 0 
+          THEN ROUND((s.correct_predictions::numeric / s.total_predictions) * 100) 
           ELSE 0 
-        END as accuracy
-       FROM predictions
-       WHERE wallet_address IS NOT NULL AND is_correct IS NOT NULL
-       GROUP BY wallet_address
-       ORDER BY total_points DESC
+        END as accuracy,
+        s.created_at
+       FROM spectators s
+       WHERE s.total_predictions > 0
+       ORDER BY s.total_points DESC
        LIMIT $1`,
       [limit]
     );
@@ -1084,13 +1506,121 @@ router.get('/stats', async (req, res) => {
   }
 });
 
+// ========== SPECTATOR ACCOUNTS ==========
+
+// Register spectator
+router.post('/spectators/register', async (req, res) => {
+  try {
+    const { name, wallet_address } = req.body;
+
+    if (!name || name.length < 2 || name.length > 50) {
+      return res.status(400).json({ error: 'Name must be 2-50 characters' });
+    }
+
+    if (wallet_address && !wallet_address.match(/^0x[a-fA-F0-9]{40}$/)) {
+      return res.status(400).json({ error: 'Invalid wallet address' });
+    }
+
+    // Check name taken
+    const existing = await db.query('SELECT id FROM spectators WHERE name = $1', [name]);
+    if (existing.rows.length > 0) {
+      return res.status(400).json({ error: 'Name already taken' });
+    }
+
+    // Check wallet already used
+    if (wallet_address) {
+      const walletExists = await db.query('SELECT id FROM spectators WHERE wallet_address = $1', [wallet_address]);
+      if (walletExists.rows.length > 0) {
+        return res.status(400).json({ error: 'Wallet address already registered' });
+      }
+    }
+
+    const result = await db.query(
+      `INSERT INTO spectators (name, wallet_address) VALUES ($1, $2) RETURNING id, name, wallet_address, created_at`,
+      [name, wallet_address || null]
+    );
+
+    res.json(result.rows[0]);
+  } catch (error) {
+    console.error('Spectator registration error:', error);
+    res.status(500).json({ error: 'Registration failed' });
+  }
+});
+
+// Search spectators (MUST be before :id route!)
+router.get('/spectators/search', async (req, res) => {
+  try {
+    const { q } = req.query;
+    if (!q || q.length < 1) return res.json([]);
+
+    const result = await db.query(
+      `SELECT id, name, wallet_address, total_points, total_predictions, correct_predictions,
+              CASE WHEN total_predictions > 0 
+                THEN ROUND((correct_predictions::numeric / total_predictions) * 100) 
+                ELSE 0 
+              END as accuracy,
+              created_at
+       FROM spectators
+       WHERE name ILIKE $1
+       ORDER BY total_points DESC
+       LIMIT 20`,
+      [`%${q}%`]
+    );
+    res.json(result.rows);
+  } catch (error) {
+    console.error('Spectator search error:', error);
+    res.status(500).json({ error: 'Search failed' });
+  }
+});
+
+// Get spectator profile by ID
+router.get('/spectators/:id', async (req, res) => {
+  try {
+    const result = await db.query(
+      `SELECT id, name, wallet_address, total_points, total_predictions, correct_predictions, created_at
+       FROM spectators WHERE id = $1`,
+      [req.params.id]
+    );
+    if (result.rows.length === 0) {
+      return res.status(404).json({ error: 'Spectator not found' });
+    }
+    res.json(result.rows[0]);
+  } catch (error) {
+    res.status(500).json({ error: 'Failed to get spectator' });
+  }
+});
+
+// Update spectator wallet
+router.put('/spectators/:id/wallet', async (req, res) => {
+  try {
+    const { wallet_address } = req.body;
+    if (!wallet_address || !wallet_address.match(/^0x[a-fA-F0-9]{40}$/)) {
+      return res.status(400).json({ error: 'Invalid wallet address' });
+    }
+
+    // Check wallet not used by another spectator
+    const walletExists = await db.query(
+      'SELECT id FROM spectators WHERE wallet_address = $1 AND id != $2',
+      [wallet_address, req.params.id]
+    );
+    if (walletExists.rows.length > 0) {
+      return res.status(400).json({ error: 'Wallet address already registered to another account' });
+    }
+
+    await db.query('UPDATE spectators SET wallet_address = $1 WHERE id = $2', [wallet_address, req.params.id]);
+    res.json({ success: true, wallet_address });
+  } catch (error) {
+    res.status(500).json({ error: 'Failed to update wallet' });
+  }
+});
+
 // ========== SPECTATOR PREDICTIONS ==========
 
 // Submit a prediction for a game
 router.post('/games/:gameId/predictions', async (req, res) => {
   try {
     const { gameId } = req.params;
-    const { spectatorId, predictedTraitorIds, walletAddress } = req.body;
+    const { spectatorId, spectatorAccountId, predictedTraitorIds, walletAddress } = req.body;
 
     if (!spectatorId || !predictedTraitorIds || !Array.isArray(predictedTraitorIds)) {
       return res.status(400).json({ error: 'spectatorId and predictedTraitorIds array required' });
@@ -1099,6 +1629,15 @@ router.post('/games/:gameId/predictions', async (req, res) => {
     // Validate wallet address if provided
     if (walletAddress && !walletAddress.match(/^0x[a-fA-F0-9]{40}$/)) {
       return res.status(400).json({ error: 'Invalid wallet address' });
+    }
+
+    // If spectator account provided, verify it exists and get wallet from it
+    let resolvedWallet = walletAddress;
+    if (spectatorAccountId) {
+      const spectator = await db.query('SELECT wallet_address FROM spectators WHERE id = $1', [spectatorAccountId]);
+      if (spectator.rows.length > 0 && spectator.rows[0].wallet_address) {
+        resolvedWallet = spectator.rows[0].wallet_address;
+      }
     }
 
     if (predictedTraitorIds.length !== 2) {
@@ -1130,23 +1669,34 @@ router.post('/games/:gameId/predictions', async (req, res) => {
     }
 
     // Check if this wallet already predicted in this game
-    if (walletAddress) {
+    if (resolvedWallet) {
       const existing = await db.query(
         `SELECT id FROM predictions WHERE game_id = $1 AND wallet_address = $2 AND spectator_id != $3`,
-        [gameId, walletAddress, spectatorId]
+        [gameId, resolvedWallet, spectatorId]
       );
       if (existing.rows.length > 0) {
         return res.status(400).json({ error: 'This wallet has already submitted a prediction for this game' });
       }
     }
 
+    // Check if this spectator account already predicted in this game
+    if (spectatorAccountId) {
+      const existing = await db.query(
+        `SELECT id FROM predictions WHERE game_id = $1 AND spectator_account_id = $2 AND spectator_id != $3`,
+        [gameId, spectatorAccountId, spectatorId]
+      );
+      if (existing.rows.length > 0) {
+        return res.status(400).json({ error: 'You have already submitted a prediction for this game' });
+      }
+    }
+
     // Insert or update prediction
     await db.query(
-      `INSERT INTO predictions (game_id, spectator_id, predicted_traitor_ids, wallet_address)
-       VALUES ($1, $2, $3, $4)
+      `INSERT INTO predictions (game_id, spectator_id, predicted_traitor_ids, wallet_address, spectator_account_id)
+       VALUES ($1, $2, $3, $4, $5)
        ON CONFLICT (game_id, spectator_id) 
-       DO UPDATE SET predicted_traitor_ids = $3, wallet_address = $4, created_at = NOW()`,
-      [gameId, spectatorId, predictedTraitorIds, walletAddress || null]
+       DO UPDATE SET predicted_traitor_ids = $3, wallet_address = $4, spectator_account_id = $5, created_at = NOW()`,
+      [gameId, spectatorId, predictedTraitorIds, resolvedWallet || null, spectatorAccountId || null]
     );
 
     res.json({ success: true, message: 'Prediction submitted!' });

@@ -210,6 +210,25 @@ const migrations = [
     up: `
       ALTER TABLE agents ADD COLUMN IF NOT EXISTS webhook_url TEXT;
     `
+  },
+  {
+    name: 'create_spectators_table',
+    up: `
+      CREATE TABLE IF NOT EXISTS spectators (
+        id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+        name VARCHAR(50) NOT NULL UNIQUE,
+        wallet_address VARCHAR(42),
+        total_points BIGINT DEFAULT 0,
+        total_predictions INT DEFAULT 0,
+        correct_predictions INT DEFAULT 0,
+        created_at TIMESTAMP DEFAULT NOW()
+      );
+      CREATE UNIQUE INDEX IF NOT EXISTS idx_spectators_wallet 
+        ON spectators(wallet_address) WHERE wallet_address IS NOT NULL;
+      CREATE INDEX IF NOT EXISTS idx_spectators_name ON spectators(name);
+      
+      ALTER TABLE predictions ADD COLUMN IF NOT EXISTS spectator_account_id UUID REFERENCES spectators(id);
+    `
   }
 ];
 

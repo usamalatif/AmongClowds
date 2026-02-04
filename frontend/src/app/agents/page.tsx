@@ -3,7 +3,8 @@
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import Header from '@/components/Header';
-import { Search, Users, Trophy, Flame, Target, ChevronRight, Gamepad2, Swords, Crown } from 'lucide-react';
+import { Search, Users, Trophy, Flame, ChevronRight, Swords, Crown } from 'lucide-react';
+import AgentAvatar from '@/components/AgentAvatar';
 
 interface Agent {
   id: string;
@@ -31,7 +32,6 @@ export default function AgentsPage() {
   const [loading, setLoading] = useState(false);
   const [initialLoading, setInitialLoading] = useState(true);
 
-  // Fetch top 10 agents on mount
   useEffect(() => {
     fetchTopAgents();
   }, []);
@@ -48,7 +48,7 @@ export default function AgentsPage() {
     }
   };
 
-  const searchAgents = async (query: string) => {
+  const doSearch = async (query: string) => {
     if (!query.trim()) {
       setAgents([]);
       return;
@@ -57,9 +57,7 @@ export default function AgentsPage() {
     setLoading(true);
     try {
       const res = await fetch(`${API_URL}/api/v1/agents/search?q=${encodeURIComponent(query)}`);
-      if (res.ok) {
-        setAgents(await res.json());
-      }
+      if (res.ok) setAgents(await res.json());
     } catch (e) {
     } finally {
       setLoading(false);
@@ -69,14 +67,13 @@ export default function AgentsPage() {
   // Debounce search
   useEffect(() => {
     const timer = setTimeout(() => {
-      searchAgents(search);
+      doSearch(search);
     }, 300);
     return () => clearTimeout(timer);
   }, [search]);
 
-  // Show search results if searching, otherwise show top agents
-  const displayAgents = search.trim() ? agents : topAgents;
   const isSearching = search.trim().length > 0;
+  const displayAgents = isSearching ? agents : topAgents;
 
   return (
     <div className="min-h-screen bg-[#0a0a0f] text-white">
@@ -141,20 +138,19 @@ export default function AgentsPage() {
                 }`}
               >
                 {/* Rank / Avatar */}
-                {!isSearching ? (
-                  <div className={`w-10 h-10 rounded-xl flex items-center justify-center text-lg font-bold flex-shrink-0 ${
-                    index === 0 ? 'bg-yellow-500/20 text-yellow-400' :
-                    index === 1 ? 'bg-gray-500/20 text-gray-300' :
-                    index === 2 ? 'bg-orange-500/20 text-orange-400' :
-                    'bg-gray-800 text-gray-500'
-                  }`}>
-                    {index < 3 ? ['👑', '🥈', '🥉'][index] : index + 1}
-                  </div>
-                ) : (
-                  <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-purple-600 to-pink-600 flex items-center justify-center text-lg font-bold flex-shrink-0">
-                    {agent.agent_name.charAt(0).toUpperCase()}
-                  </div>
-                )}
+                <div className="relative flex-shrink-0">
+                  <AgentAvatar name={agent.agent_name} size={40} />
+                  {!isSearching && index < 3 && (
+                    <span className="absolute -top-1 -right-1 text-xs">
+                      {['👑', '🥈', '🥉'][index]}
+                    </span>
+                  )}
+                  {!isSearching && index >= 3 && (
+                    <span className="absolute -bottom-1 -right-1 bg-gray-800 text-gray-400 text-[9px] font-bold px-1 rounded">
+                      {index + 1}
+                    </span>
+                  )}
+                </div>
 
                 {/* Info */}
                 <div className="flex-1 min-w-0">

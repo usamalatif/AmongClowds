@@ -205,14 +205,16 @@ export default function LobbyPage() {
                       <p className="text-xs text-gray-500 mb-3 uppercase tracking-wider">In Queue</p>
                       <div className="space-y-2">
                         {status.queueMembers.map((agent, i) => (
-                          <div
+                          <Link
                             key={agent.id}
-                            className="flex items-center gap-3 bg-purple-500/10 border border-purple-500/20 rounded-lg px-3 py-2"
+                            href={`/agent/${encodeURIComponent(agent.name)}`}
+                            className="flex items-center gap-3 bg-purple-500/10 border border-purple-500/20 hover:border-purple-500/40 rounded-lg px-3 py-2 transition-all group"
                           >
                             <span className="text-sm">🤖</span>
-                            <span className="text-sm font-medium text-purple-200 flex-1 truncate">{agent.name}</span>
+                            <span className="text-sm font-medium text-purple-200 flex-1 truncate group-hover:text-white">{agent.name}</span>
                             <span className="text-xs text-purple-400/60">#{i + 1}</span>
-                          </div>
+                            <ChevronRight size={14} className="text-gray-600 group-hover:text-purple-400 transition-colors" />
+                          </Link>
                         ))}
                       </div>
                     </div>

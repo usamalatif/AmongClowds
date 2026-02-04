@@ -4,7 +4,7 @@ import { useState } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
 import { usePathname } from 'next/navigation';
-import { Swords, Play, History, Home, Trophy, Search, Menu, X, Users } from 'lucide-react';
+import { Swords, Play, History, Home, Trophy, Search, Menu, X, Users, Cpu } from 'lucide-react';
 
 export default function Header() {
   const pathname = usePathname();
@@ -13,6 +13,8 @@ export default function Header() {
   const navItems = [
     { href: '/', label: 'Home', icon: Home },
     { href: '/agents', label: 'Agents', icon: Search },
+    { href: '/rivalry', label: 'Rivalry', icon: Swords },
+    { href: '/models', label: 'Models', icon: Cpu },
     { href: '/live', label: 'Live', icon: Play },
     { href: '/leaderboard', label: 'Leaderboard', icon: Trophy },
   ];

@@ -9,6 +9,7 @@ import { io, Socket } from 'socket.io-client';
 import { soundManager } from '@/lib/sounds';
 import SoundToggle from '@/components/SoundToggle';
 import ShareButtons from '@/components/ShareButtons';
+import AgentAvatar from '@/components/AgentAvatar';
 import confetti from 'canvas-confetti';
 
 interface Agent {
@@ -110,14 +111,12 @@ export default function GamePage() {
   const [mobileTab, setMobileTab] = useState<string>('chat');
   const [allVotesIn, setAllVotesIn] = useState(false);
   const [eventFeed, setEventFeed] = useState<GameEvent[]>([]);
+  const [clipMode, setClipMode] = useState(false);
+  const [clipStart, setClipStart] = useState<number | null>(null);
+  const [clipEnd, setClipEnd] = useState<number | null>(null);
+  const [clipCopied, setClipCopied] = useState(false);
+  const [clipHintDismissed, setClipHintDismissed] = useState(true); // default true, check localStorage in useEffect
   
-  // Predictions state
-  const [selectedTraitors, setSelectedTraitors] = useState<string[]>([]);
-  const [predictionSubmitted, setPredictionSubmitted] = useState(false);
-  const [predictionResult, setPredictionResult] = useState<{ isCorrect: boolean; pointsEarned: number } | null>(null);
-  const [spectatorId, setSpectatorId] = useState<string>('');
-  const [spectatorWallet, setSpectatorWallet] = useState<string>('');
-  const [showPredictionPanel, setShowPredictionPanel] = useState(true);
   const [newAchievements, setNewAchievements] = useState<Array<{ id: string; name: string; icon: string; description: string; rarity: string; agentName: string }>>([]);
 
   // Add event to kill feed (auto-remove after 3s)
@@ -131,26 +130,11 @@ export default function GamePage() {
     }, 3000);
   }, []);
 
-  // Initialize spectator ID from localStorage
   useEffect(() => {
-    let id = localStorage.getItem('spectatorId');
-    if (!id) {
-      id = `spectator_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
-      localStorage.setItem('spectatorId', id);
+    if (!localStorage.getItem('clipHintDismissed')) {
+      setClipHintDismissed(false);
     }
-    setSpectatorId(id);
-
-    // Load saved wallet
-    const savedWallet = localStorage.getItem('spectatorWallet') || '';
-    setSpectatorWallet(savedWallet);
-    
-    // Check if we already submitted a prediction for this game
-    const submitted = localStorage.getItem(`prediction_${gameId}`);
-    if (submitted) {
-      setPredictionSubmitted(true);
-      setSelectedTraitors(JSON.parse(submitted));
-    }
-  }, [gameId]);
+  }, []);
 
   useEffect(() => {
     fetchGame();
@@ -173,12 +157,13 @@ export default function GamePage() {
       if (data.phase === 'voting') {
         setVotes([]);
         setVoteTally({});
+        soundManager.resetVoteCount();
       }
       if (data.phase === 'murder') {
         setElimination(null);
         setLastVoteResults([]);
       }
-      soundManager.phaseChange();
+      soundManager.phaseChange(data.phase);
       setGame(prev => prev ? { ...prev, currentPhase: data.phase, currentRound: data.round, phaseEndsAt: data.endsAt } : null);
       addEvent('phase', `${phaseConfig[data.phase]?.icon || '🎮'} ${data.phase.toUpperCase()} phase started`);
       
@@ -216,6 +201,7 @@ export default function GamePage() {
     newSocket.on('all_votes_in', (data: { message: string; countdown: number }) => {
       // All votes are in - results coming soon
       setAllVotesIn(true);
+      soundManager.allVotesIn();
       setTimeout(() => setAllVotesIn(false), 5500); // Reset after countdown
     });
 
@@ -244,7 +230,11 @@ export default function GamePage() {
           )
         };
       });
-      soundManager.murder();
+      if (isDisconnect) {
+        soundManager.disconnect();
+      } else {
+        soundManager.murder();
+      }
       addEvent(isDisconnect ? 'disconnect' : 'murder', 
         isDisconnect ? `📡 ${data.agentName} disconnected` : `☠️ ${data.agentName} was murdered!`);
     });
@@ -265,7 +255,11 @@ export default function GamePage() {
           )
         };
       });
-      soundManager.elimination();
+      if (data.role === 'traitor') {
+        soundManager.traitorCaught();
+      } else {
+        soundManager.innocentLost();
+      }
       addEvent('banish', `⚖️ ${data.agentName} banished - was ${data.role === 'traitor' ? '🔴 TRAITOR' : '🟢 INNOCENT'}`);
       
       // 🎉 Confetti when innocents banish a traitor!
@@ -302,11 +296,13 @@ export default function GamePage() {
         message: data.message,
         timestamp: Date.now()
       });
+      soundManager.noBanishment();
       addEvent('phase', `⚖️ ${data.message || 'No one was banished'}`);
     });
 
     newSocket.on('achievements_unlocked', (data: { agentId: string; agentName: string; achievements: Array<{ id: string; name: string; icon: string; description: string; rarity: string }> }) => {
       // Show achievement notifications
+      soundManager.achievement();
       const achWithAgent = data.achievements.map(a => ({ ...a, agentName: data.agentName }));
       setNewAchievements(prev => [...prev, ...achWithAgent]);
       
@@ -317,7 +313,11 @@ export default function GamePage() {
     });
 
     newSocket.on('game_ended', (data) => {
-      soundManager.victory();
+      if (data.winner === 'innocents') {
+        soundManager.victory();
+      } else if (data.winner === 'traitors') {
+        soundManager.defeat();
+      }
       setGame(prev => prev ? { 
         ...prev, 
         status: 'finished', 
@@ -325,18 +325,6 @@ export default function GamePage() {
         agents: data.agents || prev.agents
       } : null);
       addEvent('phase', data.winner === 'innocents' ? '🟢 INNOCENTS WIN!' : data.winner === 'traitors' ? '🔴 TRAITORS WIN!' : '⚠️ Game abandoned');
-      
-      // Fetch prediction result if we submitted one
-      if (predictionSubmitted && spectatorId) {
-        fetch(`${API_URL}/api/v1/games/${gameId}/predictions?spectatorId=${spectatorId}`)
-          .then(res => res.json())
-          .then(result => {
-            if (result) {
-              setPredictionResult({ isCorrect: result.is_correct, pointsEarned: result.points_earned });
-            }
-          })
-          .catch(() => {});
-      }
       
       // 🎊 Victory effects based on winner
       if (data.winner === 'innocents') {
@@ -386,6 +374,7 @@ export default function GamePage() {
     return () => {
       newSocket.emit('leave_game', gameId);
       newSocket.close();
+      soundManager.stopAmbient();
     };
   }, [gameId, addEvent]);
 
@@ -441,6 +430,42 @@ export default function GamePage() {
     }
   };
 
+  const handleClipSelect = (index: number) => {
+    if (!clipMode) {
+      // First click starts clip mode + selects start
+      setClipMode(true);
+      setClipStart(index);
+      setClipEnd(index);
+    } else if (clipStart !== null) {
+      // Subsequent clicks extend or adjust the range
+      const newStart = Math.min(clipStart, index);
+      const newEnd = Math.min(Math.max(clipStart, index), newStart + 9);
+      setClipStart(newStart);
+      setClipEnd(newEnd);
+    }
+  };
+
+  const clipUrl = clipStart !== null && clipEnd !== null
+    ? `/game/${gameId}/clip?from=${clipStart}&to=${clipEnd}`
+    : '';
+
+  const copyClipLink = () => {
+    if (!clipUrl) return;
+    const full = `${window.location.origin}${clipUrl}`;
+    navigator.clipboard.writeText(full);
+    setClipCopied(true);
+    setClipHintDismissed(true);
+    localStorage.setItem('clipHintDismissed', '1');
+    setTimeout(() => setClipCopied(false), 2000);
+  };
+
+  const resetClip = () => {
+    setClipMode(false);
+    setClipStart(null);
+    setClipEnd(null);
+    setClipCopied(false);
+  };
+
   const handleReaction = (messageId: string, emoji: string) => {
     socket?.emit('react_to_message', { gameId, messageId, emoji });
     setShowReactions(null);
@@ -448,49 +473,6 @@ export default function GamePage() {
 
   const handleSusVote = (agentId: string) => {
     socket?.emit('vote_suspect', { gameId, agentId });
-  };
-
-  const toggleTraitorPrediction = (agentId: string) => {
-    if (predictionSubmitted) return;
-    
-    setSelectedTraitors(prev => {
-      if (prev.includes(agentId)) {
-        return prev.filter(id => id !== agentId);
-      }
-      if (prev.length >= 2) {
-        // Replace the first one
-        return [prev[1], agentId];
-      }
-      return [...prev, agentId];
-    });
-  };
-
-  const submitPrediction = async () => {
-    if (selectedTraitors.length !== 2 || !spectatorId) return;
-    
-    // Save wallet to localStorage for future use
-    if (spectatorWallet) {
-      localStorage.setItem('spectatorWallet', spectatorWallet);
-    }
-    
-    try {
-      const res = await fetch(`${API_URL}/api/v1/games/${gameId}/predictions`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          spectatorId,
-          predictedTraitorIds: selectedTraitors,
-          walletAddress: spectatorWallet || undefined
-        })
-      });
-      
-      if (res.ok) {
-        setPredictionSubmitted(true);
-        localStorage.setItem(`prediction_${gameId}`, JSON.stringify(selectedTraitors));
-      }
-    } catch (e) {
-      console.error('Failed to submit prediction:', e);
-    }
   };
 
   const formatTime = (seconds: number) => {
@@ -819,8 +801,9 @@ export default function GamePage() {
                         .filter(a => (a.pointsEarned || 0) > 0)
                         .sort((a, b) => (b.pointsEarned || 0) - (a.pointsEarned || 0))
                         .map((agent, i) => (
-                          <div key={agent.id} className="flex-shrink-0 flex justify-between items-center bg-black/40 rounded-lg px-3 py-2 min-w-[140px] md:min-w-0 md:px-4">
+                          <div key={agent.id} className="flex-shrink-0 flex justify-between items-center bg-black/40 rounded-lg px-3 py-2 min-w-[160px] md:min-w-0 md:px-4">
                             <div className="flex items-center gap-2">
+                              <AgentAvatar name={agent.name} size={24} />
                               <span className="text-yellow-400 font-bold text-sm">#{i + 1}</span>
                               <Link href={`/agent/${encodeURIComponent(agent.name)}`} className="text-green-300 font-medium text-sm md:text-base hover:text-green-200 transition-colors">
                                 {agent.name}
@@ -847,10 +830,13 @@ export default function GamePage() {
                       {game.agents
                         .filter(a => a.status !== 'alive')
                         .map(agent => (
-                          <div key={agent.id} className="flex-shrink-0 flex justify-between items-center bg-black/40 rounded-lg px-3 py-2 min-w-[130px] md:min-w-0 md:px-4">
-                            <Link href={`/agent/${encodeURIComponent(agent.name)}`} className={`text-sm md:text-base hover:opacity-80 transition-opacity ${agent.role === 'traitor' ? 'text-red-400' : 'text-gray-400'}`}>
-                              {agent.role === 'traitor' ? '🔴' : '💀'} {agent.name}
-                            </Link>
+                          <div key={agent.id} className="flex-shrink-0 flex justify-between items-center bg-black/40 rounded-lg px-3 py-2 min-w-[150px] md:min-w-0 md:px-4">
+                            <div className="flex items-center gap-2">
+                              <AgentAvatar name={agent.name} size={22} status={agent.status} />
+                              <Link href={`/agent/${encodeURIComponent(agent.name)}`} className={`text-sm md:text-base hover:opacity-80 transition-opacity ${agent.role === 'traitor' ? 'text-red-400' : 'text-gray-400'}`}>
+                                {agent.role === 'traitor' ? '🔴' : '💀'} {agent.name}
+                              </Link>
+                            </div>
                             <span className={`text-xs px-2 py-0.5 rounded ml-2 ${
                               agent.role === 'traitor' ? 'bg-red-900/50 text-red-400' : 'bg-gray-800 text-gray-500'
                             }`}>
@@ -951,52 +937,6 @@ export default function GamePage() {
             </div>
           </div>
 
-          {/* Sus Poll */}
-          {game.status !== 'finished' && (
-            <div className="bg-black/60 backdrop-blur-sm border-2 border-red-500/30 rounded-2xl p-4">
-              <h3 className="text-sm font-bold mb-3 flex items-center gap-2 text-red-400">
-                <Target className="w-4 h-4" />
-                WHO&apos;S SUS?
-              </h3>
-              <div className="space-y-2 max-h-[180px] overflow-y-auto">
-                {aliveAgents.map(agent => {
-                  const modelInfo = getModelInfo(agent.model);
-                  return (
-                    <button
-                      key={agent.id}
-                      onClick={() => handleSusVote(agent.id)}
-                      className="w-full flex items-center justify-between p-2.5 rounded-xl bg-gray-900/60 hover:bg-red-900/40 border border-transparent hover:border-red-500/30 transition-all text-left group"
-                    >
-                      <div className="flex items-center gap-2">
-                        <span className={`text-[10px] px-1.5 py-0.5 rounded ${modelInfo.bg} ${modelInfo.color} font-bold`}>
-                          {modelInfo.short}
-                        </span>
-                        <span className="text-sm font-medium group-hover:text-red-300">{agent.name}</span>
-                      </div>
-                      <span className="flex items-center gap-1 text-red-400 font-bold text-sm bg-red-900/30 px-2 py-0.5 rounded-lg">
-                        {susPoll[agent.name] || 0} <Flame className="w-3 h-3" />
-                      </span>
-                    </button>
-                  );
-                })}
-              </div>
-              {sortedSusPoll.length > 0 && (
-                <div className="mt-3 pt-3 border-t border-red-500/20">
-                  <p className="text-xs text-gray-500 mb-2 uppercase tracking-wider">🔥 Most Suspected</p>
-                  {sortedSusPoll.slice(0, 3).map(([name, count], i) => (
-                    <div key={name} className="flex items-center gap-2 text-sm py-1">
-                      <span className={`w-5 h-5 flex items-center justify-center rounded-full text-xs font-bold ${
-                        i === 0 ? 'bg-red-500 text-white' : i === 1 ? 'bg-orange-500 text-white' : 'bg-yellow-600 text-white'
-                      }`}>{i + 1}</span>
-                      <span className="flex-1 truncate">{name}</span>
-                      <span className="text-red-400 font-bold">{count}</span>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </div>
-          )}
-
           {/* Agents List */}
           <div className="bg-black/60 backdrop-blur-sm border-2 border-purple-500/30 rounded-2xl p-4">
             <h3 className="text-sm font-bold mb-3 flex items-center gap-2">
@@ -1026,12 +966,15 @@ export default function GamePage() {
                       <div key={agent.id} className={`p-2.5 rounded-xl border-l-4 ${game.status === 'finished' ? 'bg-gradient-to-r from-yellow-900/20 to-transparent border-yellow-500' : 'bg-gradient-to-r from-green-900/20 to-transparent border-green-500'}`}>
                         <div className="flex items-center justify-between">
                           <div className="flex items-center gap-2 min-w-0">
-                            <span className={`text-[10px] px-1.5 py-0.5 rounded ${modelInfo.bg} ${modelInfo.color} font-bold flex-shrink-0`}>
-                              {modelInfo.short}
-                            </span>
-                            <Link href={`/agent/${encodeURIComponent(agent.name)}`} className="font-medium text-sm truncate hover:text-purple-400 transition-colors">
-                              {agent.name}
-                            </Link>
+                            <AgentAvatar name={agent.name} size={28} status={agent.status} />
+                            <div className="min-w-0">
+                              <Link href={`/agent/${encodeURIComponent(agent.name)}`} className="font-medium text-sm truncate block hover:text-purple-400 transition-colors">
+                                {agent.name}
+                              </Link>
+                              <span className={`text-[9px] px-1 py-0.5 rounded ${modelInfo.bg} ${modelInfo.color} font-bold`}>
+                                {modelInfo.short}
+                              </span>
+                            </div>
                           </div>
                           {game.status === 'finished' ? (
                             <div className="flex items-center gap-2 flex-shrink-0">
@@ -1060,9 +1003,12 @@ export default function GamePage() {
                   {deadAgents.map(agent => (
                     <div key={agent.id} className="p-2.5 rounded-xl bg-gray-900/40 border-l-4 border-gray-700 opacity-60">
                       <div className="flex items-center justify-between">
-                        <Link href={`/agent/${encodeURIComponent(agent.name)}`} className="font-medium text-sm text-gray-400 line-through hover:text-purple-400 transition-colors">
-                          {agent.name}
-                        </Link>
+                        <div className="flex items-center gap-2 min-w-0">
+                          <AgentAvatar name={agent.name} size={24} status={agent.status} />
+                          <Link href={`/agent/${encodeURIComponent(agent.name)}`} className="font-medium text-sm text-gray-400 line-through hover:text-purple-400 transition-colors truncate">
+                            {agent.name}
+                          </Link>
+                        </div>
                         <span className="text-xs">
                           {agent.status === 'murdered' ? '☠️' : agent.status === 'disconnected' ? '📡' : agent.role === 'traitor' ? '🔴' : '🟢'}
                         </span>
@@ -1092,19 +1038,82 @@ export default function GamePage() {
                 <span className="text-[10px] md:text-xs text-gray-500 bg-gray-800/60 px-2 md:px-3 py-1 rounded-full">
                   {chat.length} msgs
                 </span>
+                {clipMode && (
+                  <button
+                    onClick={resetClip}
+                    className="text-[10px] md:text-xs px-2 md:px-3 py-1 rounded-full font-medium transition-all bg-yellow-500/20 text-yellow-400 border border-yellow-500/30"
+                  >
+                    ✕ Cancel Clip
+                  </button>
+                )}
               </div>
             </div>
+            {/* Clip toolbar */}
+            {clipMode && (
+              <div className="bg-yellow-900/20 border-b border-yellow-500/30 px-3 md:px-5 py-2 flex items-center justify-between gap-2">
+                <p className="text-xs text-yellow-400">
+                  {clipStart === null 
+                    ? 'Click a message to start your clip' 
+                    : clipStart === clipEnd 
+                      ? 'Click another message to set the end' 
+                      : `Selected ${(clipEnd! - clipStart!) + 1} messages`}
+                </p>
+                <div className="flex items-center gap-2">
+                  {clipStart !== null && clipEnd !== null && clipStart !== clipEnd && (
+                    <>
+                      <Link
+                        href={clipUrl}
+                        target="_blank"
+                        className="text-[10px] md:text-xs bg-purple-600 hover:bg-purple-500 px-2.5 py-1 rounded-lg font-medium transition-all"
+                      >
+                        Preview
+                      </Link>
+                      <button
+                        onClick={copyClipLink}
+                        className="text-[10px] md:text-xs bg-yellow-600 hover:bg-yellow-500 text-black px-2.5 py-1 rounded-lg font-bold transition-all"
+                      >
+                        {clipCopied ? '✓ Copied!' : '📋 Copy Link'}
+                      </button>
+                    </>
+                  )}
+                </div>
+              </div>
+            )}
           </div>
+          {/* Clip hint banner - only for first-timers */}
+          {!clipMode && !clipHintDismissed && chat.length > 3 && (
+            <div className="bg-gradient-to-r from-purple-900/30 to-transparent border-b border-purple-500/20 px-3 md:px-5 py-2 flex items-center justify-between animate-pulse">
+              <p className="text-[10px] md:text-xs text-purple-300">
+                ✂️ Hover over any message and click <span className="font-bold text-purple-200">Clip</span> to create a shareable moment
+              </p>
+              <button
+                onClick={() => { setClipHintDismissed(true); localStorage.setItem('clipHintDismissed', '1'); }}
+                className="text-gray-600 hover:text-gray-400 text-xs px-1"
+              >
+                ✕
+              </button>
+            </div>
+          )}
           <div className="flex-1 overflow-y-auto p-2 md:p-4 space-y-2 md:space-y-3">
             {chat.length > 0 ? chat.map((msg, i) => {
               const modelInfo = getModelInfo(game.agents.find(a => a.id === msg.agentId)?.model);
+              const isInClip = clipMode && clipStart !== null && clipEnd !== null && i >= clipStart && i <= clipEnd;
+              const isClipEdge = clipMode && (i === clipStart || i === clipEnd);
               return (
                 <div 
                   key={msg.messageId || i} 
-                  className="bg-gradient-to-r from-gray-900/80 to-gray-900/40 rounded-lg md:rounded-xl p-2.5 md:p-4 hover:from-purple-900/30 hover:to-gray-900/40 transition-all relative group border border-transparent hover:border-purple-500/20"
+                  onClick={() => handleClipSelect(i)}
+                  className={`rounded-lg md:rounded-xl p-2.5 md:p-4 transition-all relative group border cursor-pointer ${
+                    isInClip
+                      ? 'bg-yellow-900/20 border-yellow-500/40'
+                      : clipMode
+                        ? 'bg-gradient-to-r from-gray-900/80 to-gray-900/40 border-transparent hover:border-yellow-500/20 opacity-60'
+                        : 'bg-gradient-to-r from-gray-900/80 to-gray-900/40 border-transparent hover:from-purple-900/30 hover:to-gray-900/40 hover:border-purple-500/20'
+                  }`}
                 >
                   <div className="flex items-center justify-between mb-1.5 md:mb-2">
                     <div className="flex items-center gap-2">
+                      <AgentAvatar name={msg.agentName} size={24} />
                       <span className={`text-[10px] px-1.5 py-0.5 rounded ${modelInfo.bg} ${modelInfo.color} font-bold`}>
                         {modelInfo.short}
                       </span>
@@ -1113,6 +1122,15 @@ export default function GamePage() {
                       </Link>
                     </div>
                     <span className="text-[10px] md:text-xs text-gray-600">{formatTimestamp(msg.timestamp)}</span>
+                    {!clipMode && (
+                      <button
+                        onClick={(e) => { e.stopPropagation(); handleClipSelect(i); }}
+                        className="opacity-0 group-hover:opacity-100 transition-all ml-1.5 text-[10px] md:text-xs bg-purple-600/80 hover:bg-purple-500 text-white px-2 py-0.5 rounded-md font-medium flex items-center gap-1"
+                        title="Create a shareable clip starting from this message"
+                      >
+                        ✂️ Clip
+                      </button>
+                    )}
                   </div>
                   <p className="text-gray-200 text-xs md:text-sm leading-relaxed pl-0">{msg.message}</p>
                   
@@ -1247,109 +1265,48 @@ export default function GamePage() {
             </div>
           )}
 
-          {/* 🎯 Traitor Prediction Panel - Only shown during first 3 rounds */}
-          {game.status !== 'finished' && showPredictionPanel && game.currentRound <= 3 && (
-            <div className="bg-black/60 backdrop-blur-sm border-2 border-yellow-500/30 rounded-2xl p-4">
-              <div className="flex items-center justify-between mb-3">
-                <h3 className="text-sm font-bold flex items-center gap-2 text-yellow-400">
-                  🎯 PREDICT TRAITORS
-                </h3>
-                <button 
-                  onClick={() => setShowPredictionPanel(false)}
-                  className="text-gray-500 hover:text-white text-xs"
-                >
-                  ✕
-                </button>
-              </div>
-              
-              {predictionSubmitted ? (
-                <div className="text-center py-4">
-                  <div className="text-3xl mb-2">🔮</div>
-                  <p className="text-yellow-400 font-bold">Prediction Locked!</p>
-                  <p className="text-xs text-gray-400 mt-1">
-                    You picked: {game.agents.filter(a => selectedTraitors.includes(a.id)).map(a => a.name).join(' & ')}
-                  </p>
-                  <p className="text-xs text-gray-500 mt-2">Results revealed when game ends</p>
-                </div>
-              ) : (
-                <>
-                  <p className="text-xs text-gray-400 mb-3">
-                    Select 2 agents you think are traitors. Get points if you&apos;re right!
-                  </p>
-                  <div className="space-y-2 max-h-[200px] overflow-y-auto">
-                    {game.agents.filter(a => a.status === 'alive').map(agent => (
-                      <button
-                        key={agent.id}
-                        onClick={() => toggleTraitorPrediction(agent.id)}
-                        className={`w-full flex items-center justify-between p-2.5 rounded-xl border transition-all text-left ${
-                          selectedTraitors.includes(agent.id)
-                            ? 'bg-yellow-900/40 border-yellow-500/50 text-yellow-300'
-                            : 'bg-gray-900/60 border-transparent hover:bg-yellow-900/20 hover:border-yellow-500/30'
-                        }`}
-                      >
-                        <span className="text-sm font-medium">{agent.name}</span>
-                        {selectedTraitors.includes(agent.id) && (
-                          <span className="text-yellow-400 text-lg">🔴</span>
-                        )}
-                      </button>
-                    ))}
-                  </div>
-                  <div className="mt-3 pt-3 border-t border-yellow-500/20 space-y-2">
-                    <p className="text-xs text-gray-500">
-                      Selected: {selectedTraitors.length}/2
-                    </p>
-                    <input
-                      type="text"
-                      placeholder="Wallet address (0x...) for rewards"
-                      value={spectatorWallet}
-                      onChange={(e) => setSpectatorWallet(e.target.value)}
-                      className="w-full px-3 py-2 rounded-lg bg-gray-900/80 border border-gray-700 text-xs text-gray-300 placeholder-gray-600 focus:border-yellow-500/50 focus:outline-none"
-                    />
-                    {!spectatorWallet && (
-                      <p className="text-[10px] text-yellow-500/70">💰 Add wallet to earn token rewards for correct predictions</p>
-                    )}
-                    <button
-                      onClick={submitPrediction}
-                      disabled={selectedTraitors.length !== 2}
-                      className={`w-full py-2 rounded-xl font-bold text-sm transition-all ${
-                        selectedTraitors.length === 2
-                          ? 'bg-gradient-to-r from-yellow-600 to-orange-600 hover:from-yellow-500 hover:to-orange-500 text-black'
-                          : 'bg-gray-800 text-gray-500 cursor-not-allowed'
-                      }`}
-                    >
-                      {selectedTraitors.length === 2 ? '🎯 LOCK IN PREDICTION' : 'Select 2 Traitors'}
-                    </button>
-                  </div>
-                </>
-              )}
-            </div>
-          )}
-
-          {/* Prediction Results (when game ends) */}
-          {game.status === 'finished' && predictionSubmitted && (
-            <div className={`bg-black/60 backdrop-blur-sm border-2 rounded-2xl p-4 ${
-              predictionResult?.isCorrect ? 'border-green-500/50' : 'border-red-500/30'
-            }`}>
-              <h3 className="text-sm font-bold mb-3 flex items-center gap-2">
-                🎯 YOUR PREDICTION
+          {/* Sus Poll */}
+          {game.status !== 'finished' && (
+            <div className="bg-black/60 backdrop-blur-sm border-2 border-red-500/30 rounded-2xl p-4">
+              <h3 className="text-sm font-bold mb-3 flex items-center gap-2 text-red-400">
+                <Target className="w-4 h-4" />
+                WHO&apos;S SUS?
               </h3>
-              <div className="text-center py-2">
-                {predictionResult?.isCorrect ? (
-                  <>
-                    <div className="text-4xl mb-2">🎉</div>
-                    <p className="text-green-400 font-bold text-lg">CORRECT!</p>
-                    <p className="text-yellow-400 font-bold">+{predictionResult.pointsEarned} points</p>
-                  </>
-                ) : (
-                  <>
-                    <div className="text-4xl mb-2">😅</div>
-                    <p className="text-red-400 font-bold">Not quite!</p>
-                    <p className="text-xs text-gray-400 mt-1">
-                      You guessed {predictionResult?.pointsEarned ? `${predictionResult.pointsEarned / 50} traitor correctly` : '0 traitors'}
-                    </p>
-                  </>
-                )}
+              <div className="space-y-2 max-h-[180px] overflow-y-auto">
+                {aliveAgents.map(agent => {
+                  const modelInfo = getModelInfo(agent.model);
+                  return (
+                    <button
+                      key={agent.id}
+                      onClick={() => handleSusVote(agent.id)}
+                      className="w-full flex items-center justify-between p-2.5 rounded-xl bg-gray-900/60 hover:bg-red-900/40 border border-transparent hover:border-red-500/30 transition-all text-left group"
+                    >
+                      <div className="flex items-center gap-2">
+                        <AgentAvatar name={agent.name} size={22} />
+                        <span className="text-sm font-medium group-hover:text-red-300">{agent.name}</span>
+                      </div>
+                      <span className="flex items-center gap-1 text-red-400 font-bold text-sm bg-red-900/30 px-2 py-0.5 rounded-lg">
+                        {susPoll[agent.name] || 0} <Flame className="w-3 h-3" />
+                      </span>
+                    </button>
+                  );
+                })}
               </div>
+              {sortedSusPoll.length > 0 && (
+                <div className="mt-3 pt-3 border-t border-red-500/20">
+                  <p className="text-xs text-gray-500 mb-2 uppercase tracking-wider">🔥 Most Suspected</p>
+                  {sortedSusPoll.slice(0, 3).map(([name, count], i) => (
+                    <div key={name} className="flex items-center gap-2 text-sm py-1">
+                      <span className={`w-5 h-5 flex items-center justify-center rounded-full text-xs font-bold ${
+                        i === 0 ? 'bg-red-500 text-white' : i === 1 ? 'bg-orange-500 text-white' : 'bg-yellow-600 text-white'
+                      }`}>{i + 1}</span>
+                      <AgentAvatar name={name} size={20} />
+                      <span className="flex-1 truncate">{name}</span>
+                      <span className="text-red-400 font-bold">{count}</span>
+                    </div>
+                  ))}
+                </div>
+              )}
             </div>
           )}
 
@@ -1363,7 +1320,10 @@ export default function GamePage() {
               <div className="space-y-2">
                 {deadAgents.map(agent => (
                   <div key={agent.id} className="flex items-center justify-between text-sm bg-gray-900/40 rounded-lg px-3 py-2">
-                    <span className="text-gray-400">{agent.name}</span>
+                    <div className="flex items-center gap-2">
+                      <AgentAvatar name={agent.name} size={20} status={agent.status} />
+                      <span className="text-gray-400">{agent.name}</span>
+                    </div>
                     <span className={`text-xs px-2 py-0.5 rounded ${
                       agent.status === 'murdered' ? 'bg-red-900/50 text-red-400' :
                       agent.status === 'disconnected' ? 'bg-gray-900/50 text-gray-400' :
@@ -1426,6 +1386,7 @@ export default function GamePage() {
           to { transform: translateX(100%); }
         }
       `}</style>
+
     </div>
   );
 }

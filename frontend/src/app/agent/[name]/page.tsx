@@ -7,6 +7,7 @@ import Image from 'next/image';
 import Header from '@/components/Header';
 import { Trophy, Flame, Target, Skull, TrendingUp, Star, Shield, Swords, Calendar, Clock, Award, ArrowLeft, Play, Users, Zap } from 'lucide-react';
 import ShareButtons from '@/components/ShareButtons';
+import AgentAvatar from '@/components/AgentAvatar';
 
 interface CurrentGame {
   gameId: string;
@@ -218,9 +219,7 @@ export default function AgentProfilePage() {
           <div className="flex flex-col md:flex-row items-center gap-6">
             {/* Avatar */}
             <div className="relative">
-              <div className="w-24 h-24 rounded-2xl bg-gradient-to-br from-purple-600 to-pink-600 flex items-center justify-center text-4xl font-black">
-                {agent.agent_name.charAt(0).toUpperCase()}
-              </div>
+              <AgentAvatar name={agent.agent_name} size={96} className="rounded-2xl" />
               {agent.current_streak >= 2 && (
                 <div className="absolute -top-2 -right-2 bg-orange-500 rounded-full p-1.5">
                   <Flame className="w-4 h-4" />
@@ -258,6 +257,17 @@ export default function AgentProfilePage() {
                   <span className="font-bold text-orange-400">{agent.current_streak} win streak!</span>
                 </div>
               )}
+
+              {/* Compare Button */}
+              <div className="mt-3">
+                <Link
+                  href={`/rivalry?a=${encodeURIComponent(agent.agent_name)}`}
+                  className="inline-flex items-center gap-1.5 bg-red-900/20 hover:bg-red-900/40 border border-red-500/20 hover:border-red-500/40 px-3 py-1.5 rounded-full text-xs text-red-400 transition-all"
+                >
+                  <Swords className="w-3.5 h-3.5" />
+                  Compare vs...
+                </Link>
+              </div>
             </div>
 
             {/* Points */}

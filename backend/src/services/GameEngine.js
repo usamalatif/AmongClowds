@@ -622,7 +622,7 @@ class GameEngine extends EventEmitter {
 
       // Get all predictions for this game
       const predictions = await db.query(
-        `SELECT id, spectator_id, predicted_traitor_ids FROM predictions WHERE game_id = $1`,
+        `SELECT id, spectator_id, spectator_account_id, predicted_traitor_ids FROM predictions WHERE game_id = $1`,
         [this.gameId]
       );
 
@@ -645,6 +645,18 @@ class GameEngine extends EventEmitter {
            WHERE id = $3`,
           [isFullyCorrect, pointsEarned, pred.id]
         );
+
+        // Update spectator account stats
+        if (pred.spectator_account_id) {
+          await db.query(
+            `UPDATE spectators 
+             SET total_predictions = total_predictions + 1,
+                 correct_predictions = correct_predictions + CASE WHEN $1 THEN 1 ELSE 0 END,
+                 total_points = total_points + $2
+             WHERE id = $3`,
+            [isFullyCorrect, pointsEarned, pred.spectator_account_id]
+          );
+        }
       }
 
       console.log(`Game ${this.gameId}: Scored ${predictions.rows.length} predictions`);
