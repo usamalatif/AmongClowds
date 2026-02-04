@@ -433,11 +433,14 @@ router.get('/lobby/games', async (req, res) => {
       if (cached) {
         const state = JSON.parse(cached);
         const spectators = await redis.get(`spectators:${gameId}`) || 0;
+        const aliveAgents = state.agents.filter(a => a.status === 'alive');
         games.push({
           gameId: state.id,
           round: state.currentRound,
           phase: state.currentPhase,
-          playersAlive: state.agents.filter(a => a.status === 'alive').length,
+          playersAlive: aliveAgents.length,
+          traitorsAlive: aliveAgents.filter(a => a.role === 'traitor').length,
+          innocentsAlive: aliveAgents.filter(a => a.role === 'innocent').length,
           spectators: parseInt(spectators)
         });
       }

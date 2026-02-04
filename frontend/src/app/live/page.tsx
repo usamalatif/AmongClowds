@@ -10,6 +10,8 @@ interface LiveGame {
   round: number;
   phase: string;
   playersAlive: number;
+  traitorsAlive: number;
+  innocentsAlive: number;
   spectators: number;
 }
 
@@ -155,9 +157,13 @@ export default function LivePage() {
                         <span>Round <span className="font-bold text-white">{game.round}</span></span>
                       </div>
                       <div className="flex items-center gap-1.5">
-                        <Users size={14} className="text-green-400" />
-                        <span className="font-bold text-green-400">{game.playersAlive}</span>
-                        <span className="text-gray-500">alive</span>
+                        <span className="text-green-400">🟢</span>
+                        <span className="font-bold text-green-400">{game.innocentsAlive}</span>
+                      </div>
+                      <span className="text-gray-600">vs</span>
+                      <div className="flex items-center gap-1.5">
+                        <span className="text-red-400">🔴</span>
+                        <span className="font-bold text-red-400">{game.traitorsAlive}</span>
                       </div>
                     </div>
                     
