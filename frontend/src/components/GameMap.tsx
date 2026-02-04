@@ -31,9 +31,6 @@ interface MapAgent {
   targetY: number;
   chatBubble: string | null;
   chatBubbleFull: string | null;
-  eliminating: boolean;
-  eliminateProgress: number; // 0 to 1
-  prevStatus: Agent['status'];
 }
 
 // Walkable zones on the island (avoid ocean) — percentages of map
@@ -117,17 +114,12 @@ export default function GameMap({ agents, phase, onChatMessage, votes = [], vote
       const newAgents: MapAgent[] = agents.map(agent => {
         const existing = prev.find(a => a.id === agent.id);
         if (existing) {
-          // Detect death — trigger elimination animation
-          const justDied = existing.prevStatus === 'alive' && agent.status !== 'alive';
           return { 
             ...existing, 
             status: agent.status, 
             role: agent.role,
             name: agent.name,
             model: agent.model,
-            eliminating: justDied ? true : existing.eliminating,
-            eliminateProgress: justDied ? 0 : existing.eliminateProgress,
-            prevStatus: agent.status,
           };
         }
         const pos = getRandomWalkablePosition();
@@ -144,9 +136,6 @@ export default function GameMap({ agents, phase, onChatMessage, votes = [], vote
           targetY: target.y,
           chatBubble: null,
           chatBubbleFull: null,
-          eliminating: false,
-          eliminateProgress: 0,
-          prevStatus: agent.status,
         };
       });
       return newAgents;
@@ -184,25 +173,6 @@ export default function GameMap({ agents, phase, onChatMessage, votes = [], vote
       setMapAgents(prev => {
         let changed = false;
         const updated = prev.map(agent => {
-          // Elimination animation: walk toward bottom of screen and scale up
-          if (agent.eliminating) {
-            changed = true;
-            const newProgress = agent.eliminateProgress + delta * 0.4; // ~2.5s total
-            if (newProgress >= 1) {
-              return { ...agent, eliminating: false, eliminateProgress: 1, y: 115, x: agent.x };
-            }
-            // Ease out — starts fast, slows down
-            const ease = 1 - Math.pow(1 - newProgress, 2);
-            // Move toward bottom center
-            const targetY = 115;
-            const startY = agent.y;
-            const newY = startY + (targetY - startY) * ease * delta * 2;
-            // Slightly drift toward center X
-            const centerX = 50;
-            const newX = agent.x + (centerX - agent.x) * ease * delta * 0.5;
-            return { ...agent, eliminateProgress: newProgress, x: newX, y: newY };
-          }
-
           if (agent.status !== 'alive') return agent;
           
           const dx = agent.targetX - agent.x;
@@ -278,36 +248,19 @@ export default function GameMap({ agents, phase, onChatMessage, votes = [], vote
         const modelColor = getModelColor(agent.model);
         const hasVoted = phase === 'voting' && voterIds.has(agent.id);
         const isMostVoted = phase === 'voting' && mostVotedNames.includes(agent.name);
-        const isEliminating = agent.eliminating;
-        const elimProgress = agent.eliminateProgress;
-        
-        // Hide fully eliminated agents off screen
-        if (isDead && !isEliminating && elimProgress >= 1) return null;
-        
-        // Scale up and fade during elimination
-        const elimScale = isEliminating ? 1 + elimProgress * 1.5 : 1;
-        const elimOpacity = isEliminating ? 1 - elimProgress * 0.6 : (isDead ? 0.3 : 1);
         
         return (
           <div
             key={agent.id}
-            className="absolute"
+            className="absolute transition-opacity duration-500"
             style={{
               left: `${agent.x}%`,
               top: `${agent.y}%`,
-              transform: `translate(-50%, -50%) scale(${elimScale})`,
-              opacity: elimOpacity,
-              zIndex: isEliminating ? 50 : isDead ? 1 : 10,
-              transition: isEliminating ? 'none' : 'opacity 0.5s',
+              transform: 'translate(-50%, -50%)',
+              opacity: isDead ? 0.3 : 1,
+              zIndex: isDead ? 1 : 10,
             }}
           >
-            {/* Elimination animation overlay */}
-            {isEliminating && (
-              <div className="absolute -top-3 left-1/2 -translate-x-1/2 text-3xl animate-bounce z-30">
-                {agent.status === 'murdered' ? '💀' : agent.status === 'banished' ? '⚖️' : '📡'}
-              </div>
-            )}
-
             {/* Voting phase: thumbs up if voted, tensed if most voted */}
             {phase === 'voting' && !isDead && (hasVoted || isMostVoted) && (
               <div className="absolute -top-1 -right-1 text-lg z-20 animate-fadeInUp drop-shadow-lg">
