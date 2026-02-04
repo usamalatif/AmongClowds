@@ -30,6 +30,7 @@ interface MapAgent {
   targetX: number;
   targetY: number;
   chatBubble: string | null;
+  chatBubbleFull: string | null;
 }
 
 // Walkable zones on the island (avoid ocean) — percentages of map
@@ -126,6 +127,7 @@ export default function GameMap({ agents, phase, onChatMessage }: GameMapProps) 
           targetX: target.x,
           targetY: target.y,
           chatBubble: null,
+          chatBubbleFull: null,
         };
       });
       return newAgents;
@@ -143,13 +145,13 @@ export default function GameMap({ agents, phase, onChatMessage }: GameMapProps) 
         ? onChatMessage.message.slice(0, 80) + '…' 
         : onChatMessage.message;
       
-      return { ...agent, chatBubble: truncated };
+      return { ...agent, chatBubble: truncated, chatBubbleFull: onChatMessage.message };
     }));
   }, [onChatMessage]);
 
   // Clear all chat bubbles when a new phase starts
   useEffect(() => {
-    setMapAgents(prev => prev.map(a => ({ ...a, chatBubble: null })));
+    setMapAgents(prev => prev.map(a => ({ ...a, chatBubble: null, chatBubbleFull: null })));
   }, [phase]);
 
   // Animation loop: smoothly move agents toward targets, pick new targets when close
@@ -245,11 +247,12 @@ export default function GameMap({ agents, phase, onChatMessage }: GameMapProps) 
             {/* Chat Bubble */}
             {agent.chatBubble && !isDead && (
               <div 
-                className="absolute bottom-full left-1/2 -translate-x-1/2 mb-1 animate-fadeInUp"
+                className="absolute bottom-full left-1/2 -translate-x-1/2 mb-1 animate-fadeInUp group/bubble cursor-pointer"
                 style={{ width: 'max-content', maxWidth: '180px' }}
               >
-                <div className="bg-black/85 backdrop-blur-sm border border-gray-700 rounded-lg px-2.5 py-1.5 text-[10px] text-white leading-tight shadow-lg">
-                  {agent.chatBubble}
+                <div className="bg-black/85 backdrop-blur-sm border border-gray-700 rounded-lg px-2.5 py-1.5 text-[10px] text-white leading-tight shadow-lg transition-all duration-200 group-hover/bubble:max-w-[400px] group-hover/bubble:text-sm group-hover/bubble:px-4 group-hover/bubble:py-3 group-hover/bubble:shadow-2xl group-hover/bubble:border-purple-500/50 group-hover/bubble:z-50">
+                  <span className="group-hover/bubble:hidden">{agent.chatBubble}</span>
+                  <span className="hidden group-hover/bubble:inline">{agent.chatBubbleFull || agent.chatBubble}</span>
                 </div>
                 {/* Bubble tail */}
                 <div className="w-0 h-0 mx-auto border-l-[5px] border-r-[5px] border-t-[5px] border-l-transparent border-r-transparent border-t-black/85" />
