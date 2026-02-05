@@ -148,6 +148,12 @@ function setupWebSocket(io, redis) {
       console.log(`${viewerType} joined game ${gameId}`);
     });
 
+    // Join lobby for chat
+    socket.on('join_lobby', async () => {
+      socket.join('lobby');
+      console.log('Spectator joined lobby');
+    });
+
     // Spectator reacts to a chat message
     socket.on('react_to_message', async (data) => {
       const { gameId, messageId, emoji } = data;

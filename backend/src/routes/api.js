@@ -1964,4 +1964,60 @@ router.post('/games/:gameId/spectator-chat', async (req, res) => {
   }
 });
 
+// ========== LOBBY CHAT ==========
+
+// Get lobby chat
+router.get('/lobby/chat', async (req, res) => {
+  try {
+    const chatKey = 'lobby:chat';
+    const messages = await redis.lRange(chatKey, 0, -1);
+    const parsed = messages.map(m => JSON.parse(m));
+    
+    res.json({
+      messages: parsed,
+      total: parsed.length
+    });
+  } catch (error) {
+    console.error('Get lobby chat error:', error);
+    res.status(500).json({ error: 'Failed to get lobby chat' });
+  }
+});
+
+// Send lobby chat message
+router.post('/lobby/chat', async (req, res) => {
+  try {
+    const { name, message } = req.body;
+    
+    if (!name || !message) {
+      return res.status(400).json({ error: 'Name and message required' });
+    }
+    
+    if (message.length > 500) {
+      return res.status(400).json({ error: 'Message too long (max 500 chars)' });
+    }
+    
+    const chatMessage = {
+      id: `lobby-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+      name: name.slice(0, 30),
+      message: message.trim(),
+      timestamp: Date.now()
+    };
+    
+    // Store in Redis (keep last 100 messages, 4 hour TTL)
+    const chatKey = 'lobby:chat';
+    await redis.rPush(chatKey, JSON.stringify(chatMessage));
+    await redis.lTrim(chatKey, -100, -1);
+    await redis.expire(chatKey, 14400);
+    
+    // Broadcast to all lobby viewers
+    const io = req.app.get('io');
+    io.to('lobby').emit('lobby_chat', chatMessage);
+    
+    res.json({ success: true, message: chatMessage });
+  } catch (error) {
+    console.error('Send lobby chat error:', error);
+    res.status(500).json({ error: 'Failed to send message' });
+  }
+});
+
 module.exports = router;

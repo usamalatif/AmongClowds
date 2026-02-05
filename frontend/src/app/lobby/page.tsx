@@ -1,9 +1,10 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useRef } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
-import { ArrowLeft, Users, Eye, Swords, Timer, Skull, Target, Zap, Crown, Play, ChevronRight, Gamepad2 } from 'lucide-react';
+import { ArrowLeft, Users, Eye, Swords, Timer, Skull, Target, Zap, Crown, Play, ChevronRight, Gamepad2, MessageCircle } from 'lucide-react';
+import { io, Socket } from 'socket.io-client';
 
 interface QueueMember {
   id: string;
@@ -37,17 +38,48 @@ const phaseConfig: Record<string, { icon: string; color: string; bg: string }> =
 export default function LobbyPage() {
   const [status, setStatus] = useState<QueueStatus | null>(null);
   const [games, setGames] = useState<LiveGame[]>([]);
+  
+  // Spectator chat state
+  const [spectatorChat, setSpectatorChat] = useState<Array<{ id: string; name: string; message: string; timestamp: number }>>([]);
+  const [spectatorName, setSpectatorName] = useState('');
+  const [spectatorMessage, setSpectatorMessage] = useState('');
+  const [spectatorNameSet, setSpectatorNameSet] = useState(false);
+  const [socket, setSocket] = useState<Socket | null>(null);
+  const spectatorChatEndRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     fetchStatus();
     fetchGames();
+    fetchSpectatorChat();
+    
+    // Load spectator name from localStorage
+    const savedName = localStorage.getItem('spectatorName');
+    if (savedName) {
+      setSpectatorName(savedName);
+      setSpectatorNameSet(true);
+    }
+
+    // Socket connection for lobby chat
+    const newSocket = io(API_URL);
+    setSocket(newSocket);
+    
+    newSocket.on('connect', () => {
+      newSocket.emit('join_lobby');
+    });
+    
+    newSocket.on('lobby_chat', (msg: { id: string; name: string; message: string; timestamp: number }) => {
+      setSpectatorChat(prev => [...prev.slice(-99), msg]);
+    });
 
     const interval = setInterval(() => {
       fetchStatus();
       fetchGames();
     }, 3000);
 
-    return () => clearInterval(interval);
+    return () => {
+      clearInterval(interval);
+      newSocket.disconnect();
+    };
   }, []);
 
   const fetchStatus = async () => {
@@ -61,6 +93,44 @@ export default function LobbyPage() {
     try {
       const res = await fetch(`${API_URL}/api/v1/lobby/games`);
       if (res.ok) setGames(await res.json());
+    } catch (e) {}
+  };
+
+  const fetchSpectatorChat = async () => {
+    try {
+      const res = await fetch(`${API_URL}/api/v1/lobby/chat`);
+      if (res.ok) {
+        const data = await res.json();
+        setSpectatorChat(data.messages || []);
+      }
+    } catch (e) {}
+  };
+
+  // Auto-scroll spectator chat
+  useEffect(() => {
+    spectatorChatEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+  }, [spectatorChat]);
+
+  const sendSpectatorMessage = async () => {
+    if (!spectatorMessage.trim() || !spectatorName.trim()) return;
+    
+    try {
+      const res = await fetch(`${API_URL}/api/v1/lobby/chat`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name: spectatorName, message: spectatorMessage })
+      });
+      
+      if (res.ok) {
+        setSpectatorMessage('');
+        if (!spectatorNameSet) {
+          localStorage.setItem('spectatorName', spectatorName);
+          setSpectatorNameSet(true);
+        }
+        setTimeout(() => {
+          spectatorChatEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+        }, 100);
+      }
     } catch (e) {}
   };
 
@@ -232,6 +302,54 @@ export default function LobbyPage() {
                   </div>
                 </div>
               )}
+            </div>
+
+            {/* Spectator Chat */}
+            <div className="bg-gray-900/50 border border-cyan-500/30 rounded-2xl p-4 mt-4">
+              <h3 className="text-xs text-gray-500 font-bold uppercase tracking-wider mb-3 flex items-center gap-2">
+                <MessageCircle size={14} className="text-cyan-400" />
+                LOBBY CHAT
+              </h3>
+              <div className="space-y-1.5 max-h-[200px] overflow-y-auto mb-3">
+                {spectatorChat.length > 0 ? spectatorChat.slice(-30).map((msg) => (
+                  <div key={msg.id} className="text-xs py-1 border-b border-gray-800/50 last:border-0">
+                    <span className="text-cyan-400 font-bold">{msg.name}: </span>
+                    <span className="text-gray-300">{msg.message}</span>
+                  </div>
+                )) : (
+                  <p className="text-gray-600 text-xs text-center py-4">Be the first to chat!</p>
+                )}
+                <div ref={spectatorChatEndRef} />
+              </div>
+              <div className="space-y-2">
+                {!spectatorNameSet && (
+                  <input
+                    type="text"
+                    value={spectatorName}
+                    onChange={(e) => setSpectatorName(e.target.value.slice(0, 20))}
+                    placeholder="Your name..."
+                    className="w-full bg-gray-900/80 border border-gray-700 rounded-lg px-3 py-2 text-sm text-white placeholder-gray-500 focus:border-cyan-500 focus:outline-none"
+                  />
+                )}
+                <div className="flex gap-2">
+                  <input
+                    type="text"
+                    value={spectatorMessage}
+                    onChange={(e) => setSpectatorMessage(e.target.value.slice(0, 200))}
+                    onKeyDown={(e) => e.key === 'Enter' && sendSpectatorMessage()}
+                    placeholder={spectatorNameSet ? "Say something..." : "Enter name first..."}
+                    disabled={!spectatorName.trim()}
+                    className="flex-1 bg-gray-900/80 border border-gray-700 rounded-lg px-3 py-2 text-sm text-white placeholder-gray-500 focus:border-cyan-500 focus:outline-none disabled:opacity-50"
+                  />
+                  <button
+                    onClick={sendSpectatorMessage}
+                    disabled={!spectatorMessage.trim() || !spectatorName.trim()}
+                    className="px-4 py-2 bg-cyan-600 hover:bg-cyan-500 disabled:bg-gray-700 disabled:opacity-50 rounded-lg text-sm font-bold transition-colors"
+                  >
+                    Send
+                  </button>
+                </div>
+              </div>
             </div>
           </div>
 
