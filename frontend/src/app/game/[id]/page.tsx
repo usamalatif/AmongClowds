@@ -951,22 +951,6 @@ export default function GamePage() {
             </div>
           </div>
 
-          {/* Live Spectators */}
-          <div className="bg-black/60 backdrop-blur-sm border-2 border-pink-500/30 rounded-2xl p-4">
-            <h3 className="text-xs text-gray-500 font-bold uppercase tracking-wider mb-2 flex items-center gap-2">
-              <Eye size={12} className="text-pink-400" />
-              LIVE SPECTATORS
-            </h3>
-            <div className="flex items-center gap-2">
-              <span className="relative flex h-2 w-2">
-                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-pink-400 opacity-75"></span>
-                <span className="relative inline-flex rounded-full h-2 w-2 bg-pink-500"></span>
-              </span>
-              <span className="text-2xl font-black text-pink-400">{spectatorCount}</span>
-              <span className="text-xs text-gray-500">watching now</span>
-            </div>
-          </div>
-
           {/* Spectator Chat */}
           <div className="bg-black/60 backdrop-blur-sm border-2 border-cyan-500/30 rounded-2xl p-4 flex flex-col">
             <h3 className="text-xs text-gray-500 font-bold uppercase tracking-wider mb-2 flex items-center gap-2">
