@@ -488,6 +488,10 @@ export default function GamePage() {
           localStorage.setItem('spectatorName', spectatorName);
           setSpectatorNameSet(true);
         }
+        // Scroll after message arrives via WebSocket
+        setTimeout(() => {
+          spectatorChatEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+        }, 100);
       }
     } catch (e) {}
   };
@@ -1417,6 +1421,7 @@ export default function GamePage() {
                 )) : (
                   <p className="text-gray-600 text-xs text-center py-2">Be the first to chat!</p>
                 )}
+                <div ref={spectatorChatEndRef} />
               </div>
               <div className="space-y-2">
                 {!spectatorNameSet && (
