@@ -1412,8 +1412,8 @@ export default function GamePage() {
                 <MessageCircle className="w-3 h-3 text-cyan-400" />
                 SPECTATOR CHAT
               </h3>
-              <div className="space-y-1.5 max-h-[100px] overflow-y-auto mb-2">
-                {spectatorChat.length > 0 ? spectatorChat.slice(-15).map((msg) => (
+              <div className="space-y-1.5 max-h-[180px] overflow-y-auto mb-2">
+                {spectatorChat.length > 0 ? spectatorChat.slice(-20).map((msg) => (
                   <div key={msg.id} className="text-xs py-1 border-b border-gray-800/50 last:border-0">
                     <span className="text-cyan-400 font-bold">{msg.name}: </span>
                     <span className="text-gray-300">{msg.message}</span>
