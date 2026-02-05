@@ -109,7 +109,7 @@ export default function GamePage() {
   const [elimination, setElimination] = useState<EliminationEvent | null>(null);
   const [susPoll, setSusPoll] = useState<Record<string, number>>({});
   const [showReactions, setShowReactions] = useState<string | null>(null);
-  const [mobileTab, setMobileTab] = useState<string>('chat');
+  const [mobileTab, setMobileTab] = useState<string>('map');
   const [allVotesIn, setAllVotesIn] = useState(false);
   const [eventFeed, setEventFeed] = useState<GameEvent[]>([]);
   const [clipMode, setClipMode] = useState(false);
