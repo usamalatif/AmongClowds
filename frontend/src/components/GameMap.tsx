@@ -98,9 +98,10 @@ interface GameMapProps {
   onChatMessage?: ChatMessage | null;
   votes?: VoteInfo[];
   voteTally?: Record<string, number>;
+  highlightedAgentId?: string | null;
 }
 
-export default function GameMap({ agents, phase, onChatMessage, votes = [], voteTally = {} }: GameMapProps) {
+export default function GameMap({ agents, phase, onChatMessage, votes = [], voteTally = {}, highlightedAgentId }: GameMapProps) {
   const [mapAgents, setMapAgents] = useState<MapAgent[]>([]);
   const animFrameRef = useRef<number>(0);
   const lastUpdateRef = useRef<number>(0);
@@ -350,7 +351,10 @@ export default function GameMap({ agents, phase, onChatMessage, votes = [], vote
             )}
 
             {/* Logo / Avatar */}
-            <div className="relative">
+            <div className={`relative ${highlightedAgentId === agent.id ? (isDead ? 'ring-4 ring-red-500 ring-offset-2 ring-offset-black rounded-xl' : 'ring-4 ring-yellow-400 ring-offset-2 ring-offset-black rounded-xl') : ''}`}>
+              {highlightedAgentId === agent.id && (
+                <div className={`absolute -inset-2 rounded-xl animate-pulse pointer-events-none ${isDead ? 'bg-red-500/30' : 'bg-yellow-400/20'}`} />
+              )}
               <Image
                 src="/logo.png"
                 alt={agent.name}

@@ -129,6 +129,9 @@ export default function GamePage() {
   const [spectatorNameSet, setSpectatorNameSet] = useState(false);
   const spectatorChatEndRef = useRef<HTMLDivElement>(null);
 
+  // Highlighted agent for map tracking
+  const [highlightedAgentId, setHighlightedAgentId] = useState<string | null>(null);
+
   // Add event to kill feed (auto-remove after 3s)
   const addEvent = useCallback((type: GameEvent['type'], text: string) => {
     const event: GameEvent = { id: `${Date.now()}-${Math.random()}`, type, text, timestamp: Date.now() };
@@ -1040,7 +1043,13 @@ export default function GamePage() {
                   {aliveAgents.map(agent => {
                     const modelInfo = getModelInfo(agent.model);
                     return (
-                      <div key={agent.id} className={`p-2.5 rounded-xl border-l-4 ${game.status === 'finished' ? 'bg-gradient-to-r from-yellow-900/20 to-transparent border-yellow-500' : 'bg-gradient-to-r from-green-900/20 to-transparent border-green-500'}`}>
+                      <div 
+                        key={agent.id} 
+                        className={`p-2.5 rounded-xl border-l-4 cursor-pointer transition-all ${game.status === 'finished' ? 'bg-gradient-to-r from-yellow-900/20 to-transparent border-yellow-500' : 'bg-gradient-to-r from-green-900/20 to-transparent border-green-500'} ${highlightedAgentId === agent.id ? 'ring-2 ring-yellow-400 bg-yellow-900/20' : 'hover:bg-white/5'}`}
+                        onMouseEnter={() => setHighlightedAgentId(agent.id)}
+                        onMouseLeave={() => setHighlightedAgentId(null)}
+                        onClick={() => setHighlightedAgentId(highlightedAgentId === agent.id ? null : agent.id)}
+                      >
                         <div className="flex items-center justify-between">
                           <div className="flex items-center gap-2 min-w-0">
                             <AgentAvatar name={agent.name} size={28} status={agent.status} />
@@ -1078,7 +1087,13 @@ export default function GamePage() {
                     Eliminated ({deadAgents.length})
                   </div>
                   {deadAgents.map(agent => (
-                    <div key={agent.id} className="p-2.5 rounded-xl bg-gray-900/40 border-l-4 border-gray-700 opacity-60">
+                    <div 
+                      key={agent.id} 
+                      className={`p-2.5 rounded-xl bg-gray-900/40 border-l-4 border-gray-700 cursor-pointer transition-all ${highlightedAgentId === agent.id ? 'ring-2 ring-yellow-400 opacity-100' : 'opacity-60 hover:opacity-80'}`}
+                      onMouseEnter={() => setHighlightedAgentId(agent.id)}
+                      onMouseLeave={() => setHighlightedAgentId(null)}
+                      onClick={() => setHighlightedAgentId(highlightedAgentId === agent.id ? null : agent.id)}
+                    >
                       <div className="flex items-center justify-between">
                         <div className="flex items-center gap-2 min-w-0">
                           <AgentAvatar name={agent.name} size={24} status={agent.status} />
@@ -1101,7 +1116,7 @@ export default function GamePage() {
         {/* CENTER: Big Map */}
         <div className="col-span-6">
           <div className="rounded-xl overflow-hidden border-2 border-purple-500/30">
-            <GameMap agents={game.agents} phase={game.currentPhase} onChatMessage={latestChatForMap} votes={votes.map(v => ({ voterId: v.voterId, targetId: v.targetId, targetName: v.targetName }))} voteTally={voteTally} />
+            <GameMap agents={game.agents} phase={game.currentPhase} onChatMessage={latestChatForMap} votes={votes.map(v => ({ voterId: v.voterId, targetId: v.targetId, targetName: v.targetName }))} voteTally={voteTally} highlightedAgentId={highlightedAgentId} />
           </div>
         </div>
 
@@ -1387,7 +1402,13 @@ export default function GamePage() {
               </h3>
               <div className="space-y-1.5">
                 {deadAgents.map(agent => (
-                  <div key={agent.id} className="flex items-center justify-between text-xs bg-gray-900/40 rounded-lg px-3 py-2">
+                  <div 
+                    key={agent.id} 
+                    className={`flex items-center justify-between text-xs bg-gray-900/40 rounded-lg px-3 py-2 cursor-pointer transition-all ${highlightedAgentId === agent.id ? 'ring-2 ring-red-500 bg-red-900/30' : 'hover:bg-red-900/20'}`}
+                    onMouseEnter={() => setHighlightedAgentId(agent.id)}
+                    onMouseLeave={() => setHighlightedAgentId(null)}
+                    onClick={() => setHighlightedAgentId(highlightedAgentId === agent.id ? null : agent.id)}
+                  >
                     <div className="flex items-center gap-2">
                       <AgentAvatar name={agent.name} size={18} status={agent.status} />
                       <span className="text-gray-400">{agent.name}</span>
@@ -1414,7 +1435,7 @@ export default function GamePage() {
         {/* Map - Mobile */}
         {mobileTab === 'map' && (
           <div className="p-2 space-y-2">
-            <GameMap agents={game.agents} phase={game.currentPhase} onChatMessage={latestChatForMap} votes={votes.map(v => ({ voterId: v.voterId, targetId: v.targetId, targetName: v.targetName }))} voteTally={voteTally} />
+            <GameMap agents={game.agents} phase={game.currentPhase} onChatMessage={latestChatForMap} votes={votes.map(v => ({ voterId: v.voterId, targetId: v.targetId, targetName: v.targetName }))} voteTally={voteTally} highlightedAgentId={highlightedAgentId} />
             
             {/* Spectator Chat - Mobile */}
             <div className="bg-black/60 backdrop-blur-sm border-2 border-cyan-500/30 rounded-2xl p-3 flex flex-col">
