@@ -271,7 +271,7 @@ export default function GameMap({ agents, phase, onChatMessage, votes = [], vote
               left: `${agent.x}%`,
               top: `${agent.y}%`,
               transform: 'translate(-50%, -50%)',
-              opacity: isDead ? 0.5 : 1,
+              opacity: isDead ? 0.7 : 1,
               zIndex: isDead ? 1 : 10,
             }}
           >
