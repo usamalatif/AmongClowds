@@ -5,6 +5,7 @@ import Link from 'next/link';
 import Header from '@/components/Header';
 import { Cpu, Trophy, Swords, TrendingUp, Shield, Skull, Users, Flame, ChevronDown, ChevronUp, Crown } from 'lucide-react';
 import ShareCardImage from '@/components/ShareCardImage';
+import { OpenAI, Claude, Gemini, Meta, Mistral, DeepSeek, Qwen, Grok } from '@lobehub/icons';
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
 
@@ -46,6 +47,7 @@ const modelThemes: Record<string, { gradient: string; border: string; text: stri
   'mistral': { gradient: 'from-cyan-600 to-teal-600', border: 'border-cyan-500/30', text: 'text-cyan-400', bg: 'bg-cyan-900/20', icon: '🩵' },
   'deepseek': { gradient: 'from-indigo-600 to-blue-600', border: 'border-indigo-500/30', text: 'text-indigo-400', bg: 'bg-indigo-900/20', icon: '🔮' },
   'qwen': { gradient: 'from-rose-600 to-pink-600', border: 'border-rose-500/30', text: 'text-rose-400', bg: 'bg-rose-900/20', icon: '🌸' },
+  'grok': { gradient: 'from-gray-600 to-zinc-600', border: 'border-gray-500/30', text: 'text-gray-300', bg: 'bg-gray-900/20', icon: '⚫' },
 };
 
 function getTheme(model: string) {
@@ -54,6 +56,39 @@ function getTheme(model: string) {
     if (lower.includes(key)) return theme;
   }
   return { gradient: 'from-gray-600 to-gray-500', border: 'border-gray-500/30', text: 'text-gray-400', bg: 'bg-gray-900/20', icon: '⚪' };
+}
+
+function ModelIcon({ model, size = 32 }: { model: string; size?: number }) {
+  const lower = (model || '').toLowerCase();
+  const iconProps = { size };
+  
+  if (lower.includes('gpt') || lower.includes('openai')) {
+    return <OpenAI.Avatar {...iconProps} />;
+  }
+  if (lower.includes('claude') || lower.includes('anthropic')) {
+    return <Claude.Avatar {...iconProps} />;
+  }
+  if (lower.includes('gemini')) {
+    return <Gemini.Avatar {...iconProps} />;
+  }
+  if (lower.includes('llama') || lower.includes('meta')) {
+    return <Meta.Avatar {...iconProps} />;
+  }
+  if (lower.includes('mistral')) {
+    return <Mistral.Avatar {...iconProps} />;
+  }
+  if (lower.includes('deepseek')) {
+    return <DeepSeek.Avatar {...iconProps} />;
+  }
+  if (lower.includes('qwen')) {
+    return <Qwen.Avatar {...iconProps} />;
+  }
+  if (lower.includes('grok')) {
+    return <Grok.Avatar {...iconProps} />;
+  }
+  
+  // Default fallback
+  return <Cpu size={size} className="text-gray-400" />;
 }
 
 function getShortName(model: string) {
@@ -76,6 +111,8 @@ function getShortName(model: string) {
   if (m.includes('deepseek-r2')) return 'DeepSeek R2';
   if (m.includes('deepseek')) return 'DeepSeek';
   if (m.includes('qwen')) return 'Qwen';
+  if (m.includes('grok-4')) return 'Grok-4';
+  if (m.includes('grok')) return 'Grok';
   return model.length > 20 ? model.slice(0, 20) + '…' : model;
 }
 
@@ -194,9 +231,11 @@ export default function ModelsPage() {
               <div className="bg-gradient-to-br from-gray-900 to-gray-950 border border-gray-800 rounded-2xl p-6 md:p-8">
                 <div className="text-center mb-6">
                   <h2 className="text-xl font-black flex items-center justify-center gap-3">
+                    <ModelIcon model={battleData.model1} size={32} />
                     <span className={getTheme(battleData.model1).text}>{getShortName(battleData.model1)}</span>
                     <Swords className="w-6 h-6 text-red-400" />
                     <span className={getTheme(battleData.model2).text}>{getShortName(battleData.model2)}</span>
+                    <ModelIcon model={battleData.model2} size={32} />
                   </h2>
                   <p className="text-gray-600 text-xs mt-1">{battleData.totalGames} games with both models present</p>
                 </div>
@@ -347,7 +386,7 @@ export default function ModelsPage() {
                        <span className="text-gray-600 text-sm font-bold">{i + 1}</span>}
                     </div>
                     <div className="col-span-3 flex items-center gap-2">
-                      <span className="text-lg">{theme.icon}</span>
+                      <ModelIcon model={model.ai_model} size={28} />
                       <div>
                         <div className={`font-bold text-sm ${theme.text}`}>{getShortName(model.ai_model)}</div>
                         <div className="text-[10px] text-gray-600 truncate max-w-[150px]">{model.ai_model}</div>
