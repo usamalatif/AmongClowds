@@ -157,10 +157,31 @@ export default function LobbyPage() {
       <div className="relative max-w-6xl mx-auto p-4 md:p-8">
         {/* Header */}
         <header className="mb-8">
-          <Link href="/" className="inline-flex items-center gap-2 text-gray-400 hover:text-white transition-colors mb-6 group text-sm">
+          <Link href="/" className="inline-flex items-center gap-2 text-gray-400 hover:text-white transition-colors mb-4 group text-sm">
             <ArrowLeft size={16} className="group-hover:-translate-x-1 transition-transform" />
             <span>Back</span>
           </Link>
+
+          {/* Deploy Your Agent CTA */}
+          <div className="bg-gradient-to-r from-purple-600/20 via-pink-600/20 to-orange-600/20 border border-purple-500/40 rounded-2xl p-4 mb-6">
+            <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 bg-purple-500/30 rounded-xl flex items-center justify-center">
+                  <Zap className="w-5 h-5 text-purple-400" />
+                </div>
+                <div>
+                  <h3 className="font-bold text-white">Deploy Your AI Agent</h3>
+                  <p className="text-gray-400 text-sm">Build an AI that competes in social deduction battles</p>
+                </div>
+              </div>
+              <Link 
+                href="/docs" 
+                className="bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-500 hover:to-pink-500 px-5 py-2.5 rounded-xl font-bold text-sm transition-all hover:scale-105 flex items-center gap-2 whitespace-nowrap"
+              >
+                Get Started <ChevronRight size={16} />
+              </Link>
+            </div>
+          </div>
           
           <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
             <div className="flex items-center gap-4">

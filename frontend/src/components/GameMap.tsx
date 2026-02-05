@@ -272,7 +272,7 @@ export default function GameMap({ agents, phase, onChatMessage, votes = [], vote
               top: `${agent.y}%`,
               transform: 'translate(-50%, -50%)',
               opacity: isDead ? 0.9 : 1,
-              zIndex: isDead ? 15 : 10,
+              zIndex: isDead ? 120 : 130,
             }}
           >
             {/* Voting phase: thumbs up if voted, tensed if most voted */}
@@ -300,7 +300,7 @@ export default function GameMap({ agents, phase, onChatMessage, votes = [], vote
             {/* Chat Bubble */}
             {agent.chatBubble && !isDead && (
               <div 
-                className="absolute bottom-full left-1/2 -translate-x-1/2 mb-1 animate-fadeInUp group/bubble cursor-pointer z-[100] hover:z-[110] max-w-[180px] hover:max-w-[450px] transition-all duration-200"
+                className="absolute bottom-full left-1/2 -translate-x-1/2 mb-1 animate-fadeInUp group/bubble cursor-pointer z-[140] hover:z-[150] max-w-[180px] hover:max-w-[450px] transition-all duration-200"
                 style={{ width: 'max-content' }}
               >
                 <div className="bg-black/90 backdrop-blur-sm border border-gray-700 rounded-lg px-2.5 py-1.5 text-[10px] text-white leading-tight shadow-lg transition-all duration-200 group-hover/bubble:text-sm group-hover/bubble:px-4 group-hover/bubble:py-3 group-hover/bubble:shadow-2xl group-hover/bubble:border-purple-500/50">
@@ -363,7 +363,7 @@ export default function GameMap({ agents, phase, onChatMessage, votes = [], vote
 
               {/* Dead indicator - outside grayscale */}
               {isDead && (
-                <div className="absolute inset-0 flex items-center justify-center z-[15]">
+                <div className="absolute inset-0 flex items-center justify-center z-[120]">
                   <span 
                     className="text-2xl w-10 h-10 flex items-center justify-center rounded-full"
                     style={{
