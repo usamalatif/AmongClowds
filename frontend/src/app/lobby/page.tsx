@@ -443,34 +443,44 @@ export default function LobbyPage() {
               <p className="text-gray-600 text-xs text-center py-4">Be the first to chat!</p>
             )}
           </div>
-          <div className="space-y-2">
-            {!spectatorNameSet && (
-              <input
-                type="text"
-                value={spectatorName}
-                onChange={(e) => setSpectatorName(e.target.value.slice(0, 20))}
-                placeholder="Your name..."
-                className="w-full bg-gray-900/80 border border-gray-700 rounded-lg px-3 py-2 text-sm text-white placeholder-gray-500 focus:border-cyan-500 focus:outline-none"
-              />
+          <div className="flex gap-2">
+            {!spectatorNameSet ? (
+              <>
+                <input
+                  type="text"
+                  value={spectatorName}
+                  onChange={(e) => setSpectatorName(e.target.value.slice(0, 20))}
+                  onKeyDown={(e) => e.key === 'Enter' && spectatorName.trim() && (localStorage.setItem('spectatorName', spectatorName), setSpectatorNameSet(true))}
+                  placeholder="Enter your name..."
+                  className="flex-1 bg-gray-900/80 border border-gray-700 rounded-lg px-3 py-2 text-sm text-white placeholder-gray-500 focus:border-cyan-500 focus:outline-none"
+                />
+                <button
+                  onClick={() => { if (spectatorName.trim()) { localStorage.setItem('spectatorName', spectatorName); setSpectatorNameSet(true); }}}
+                  disabled={!spectatorName.trim()}
+                  className="px-4 py-2 bg-cyan-600 hover:bg-cyan-500 disabled:bg-gray-700 disabled:opacity-50 rounded-lg text-sm font-bold transition-colors"
+                >
+                  Join
+                </button>
+              </>
+            ) : (
+              <>
+                <input
+                  type="text"
+                  value={spectatorMessage}
+                  onChange={(e) => setSpectatorMessage(e.target.value.slice(0, 200))}
+                  onKeyDown={(e) => e.key === 'Enter' && sendSpectatorMessage()}
+                  placeholder="Say something..."
+                  className="flex-1 bg-gray-900/80 border border-gray-700 rounded-lg px-3 py-2 text-sm text-white placeholder-gray-500 focus:border-cyan-500 focus:outline-none"
+                />
+                <button
+                  onClick={sendSpectatorMessage}
+                  disabled={!spectatorMessage.trim()}
+                  className="px-4 py-2 bg-cyan-600 hover:bg-cyan-500 disabled:bg-gray-700 disabled:opacity-50 rounded-lg text-sm font-bold transition-colors"
+                >
+                  Send
+                </button>
+              </>
             )}
-            <div className="flex gap-2">
-              <input
-                type="text"
-                value={spectatorMessage}
-                onChange={(e) => setSpectatorMessage(e.target.value.slice(0, 200))}
-                onKeyDown={(e) => e.key === 'Enter' && sendSpectatorMessage()}
-                placeholder={spectatorNameSet ? "Say something..." : "Enter name first..."}
-                disabled={!spectatorName.trim()}
-                className="flex-1 bg-gray-900/80 border border-gray-700 rounded-lg px-3 py-2 text-sm text-white placeholder-gray-500 focus:border-cyan-500 focus:outline-none disabled:opacity-50"
-              />
-              <button
-                onClick={sendSpectatorMessage}
-                disabled={!spectatorMessage.trim() || !spectatorName.trim()}
-                className="px-4 py-2 bg-cyan-600 hover:bg-cyan-500 disabled:bg-gray-700 disabled:opacity-50 rounded-lg text-sm font-bold transition-colors"
-              >
-                Send
-              </button>
-            </div>
           </div>
         </div>
       </div>
