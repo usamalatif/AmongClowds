@@ -15,6 +15,13 @@ function setupWebSocket(io, redis) {
   io.on('connection', async (socket) => {
     console.log('Client connected:', socket.id);
 
+    // Track total site users
+    const siteUsers = await redis.incr('site:users');
+    io.emit('site_users', siteUsers);
+    
+    // Send current count to this socket
+    socket.emit('site_users', siteUsers);
+
     // Authenticate via API key
     socket.on('authenticate', async (data) => {
       try {
@@ -233,6 +240,10 @@ function setupWebSocket(io, redis) {
     // Handle disconnect
     socket.on('disconnect', async () => {
       console.log('Client disconnected:', socket.id);
+
+      // Decrement site users
+      const siteUsers = await redis.decr('site:users');
+      io.emit('site_users', Math.max(0, siteUsers));
 
       // Remove from lobby queue if agent disconnects
       if (socket.agentId) {

@@ -720,6 +720,7 @@ router.get('/lobby/status', async (req, res) => {
   try {
     const queueSize = await redis.zCard('lobby:queue');
     const activeGames = await redis.lLen('games:active');
+    const siteUsers = parseInt(await redis.get('site:users') || '0', 10);
     
     // Get queue members with their names
     const agentIds = await redis.zRange('lobby:queue', 0, -1);
@@ -741,6 +742,7 @@ router.get('/lobby/status', async (req, res) => {
     res.json({
       queueSize,
       activeGames,
+      siteUsers,
       nextGameIn: queueSize >= 10 ? 0 : null,
       queueMembers
     });

@@ -38,6 +38,7 @@ const phaseConfig: Record<string, { icon: string; color: string; bg: string }> =
 export default function LobbyPage() {
   const [status, setStatus] = useState<QueueStatus | null>(null);
   const [games, setGames] = useState<LiveGame[]>([]);
+  const [siteUsers, setSiteUsers] = useState(0);
   
   // Spectator chat state
   const [spectatorChat, setSpectatorChat] = useState<Array<{ id: string; name: string; message: string; timestamp: number }>>([]);
@@ -71,6 +72,10 @@ export default function LobbyPage() {
       setSpectatorChat(prev => [...prev.slice(-99), msg]);
     });
 
+    newSocket.on('site_users', (count: number) => {
+      setSiteUsers(count);
+    });
+
     const interval = setInterval(() => {
       fetchStatus();
       fetchGames();
@@ -85,7 +90,11 @@ export default function LobbyPage() {
   const fetchStatus = async () => {
     try {
       const res = await fetch(`${API_URL}/api/v1/lobby/status`);
-      if (res.ok) setStatus(await res.json());
+      if (res.ok) {
+        const data = await res.json();
+        setStatus(data);
+        if (data.siteUsers) setSiteUsers(data.siteUsers);
+      }
     } catch (e) {}
   };
 
@@ -166,6 +175,16 @@ export default function LobbyPage() {
             
             {/* Quick stats */}
             <div className="flex items-center gap-4 text-sm">
+              {siteUsers > 0 && (
+                <div className="flex items-center gap-2 px-3 py-1.5 bg-green-500/10 border border-green-500/30 rounded-full">
+                  <span className="relative flex h-2 w-2">
+                    <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-500 opacity-75" />
+                    <span className="relative inline-flex rounded-full h-2 w-2 bg-green-500" />
+                  </span>
+                  <span className="text-green-400 font-bold">{siteUsers}</span>
+                  <span className="text-gray-500">online</span>
+                </div>
+              )}
               {games.length > 0 && (
                 <div className="flex items-center gap-2 px-3 py-1.5 bg-red-500/10 border border-red-500/30 rounded-full">
                   <span className="relative flex h-2 w-2">
