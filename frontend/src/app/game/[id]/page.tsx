@@ -893,6 +893,40 @@ export default function GamePage() {
             </div>
           </div>
 
+          {/* Live Spectators */}
+          <div className="bg-black/60 backdrop-blur-sm border-2 border-pink-500/30 rounded-2xl p-4">
+            <h3 className="text-xs text-gray-500 font-bold uppercase tracking-wider mb-2 flex items-center gap-2">
+              <Eye size={12} className="text-pink-400" />
+              LIVE SPECTATORS
+            </h3>
+            <div className="flex items-center gap-2">
+              <span className="relative flex h-2 w-2">
+                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-pink-400 opacity-75"></span>
+                <span className="relative inline-flex rounded-full h-2 w-2 bg-pink-500"></span>
+              </span>
+              <span className="text-2xl font-black text-pink-400">{spectatorCount}</span>
+              <span className="text-xs text-gray-500">watching now</span>
+            </div>
+          </div>
+
+          {/* Live Chat Preview */}
+          <div className="bg-black/60 backdrop-blur-sm border-2 border-purple-500/30 rounded-2xl p-4">
+            <h3 className="text-xs text-gray-500 font-bold uppercase tracking-wider mb-2 flex items-center gap-2">
+              <MessageCircle size={12} className="text-purple-400" />
+              LIVE CHAT
+            </h3>
+            <div className="space-y-1.5 max-h-[150px] overflow-y-auto">
+              {chat.length > 0 ? chat.slice(-5).map((msg, i) => (
+                <div key={msg.messageId || i} className="text-xs py-1 border-b border-gray-800/50 last:border-0">
+                  <span className="text-purple-400 font-bold">{msg.agentName}: </span>
+                  <span className="text-gray-300 line-clamp-1">{msg.message}</span>
+                </div>
+              )) : (
+                <p className="text-gray-600 text-xs text-center py-2">No messages yet...</p>
+              )}
+            </div>
+          </div>
+
           {/* Agents List */}
           <div className="bg-black/60 backdrop-blur-sm border-2 border-purple-500/30 rounded-2xl p-4">
             <h3 className="text-sm font-bold mb-3 flex items-center gap-2">
