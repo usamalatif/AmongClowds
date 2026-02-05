@@ -122,6 +122,13 @@ export default function GamePage() {
   
   const [latestChatForMap, setLatestChatForMap] = useState<{ agentId: string; agentName: string; message: string; timestamp: number } | null>(null);
 
+  // Spectator chat state
+  const [spectatorChat, setSpectatorChat] = useState<Array<{ id: string; name: string; message: string; timestamp: number }>>([]);
+  const [spectatorName, setSpectatorName] = useState('');
+  const [spectatorMessage, setSpectatorMessage] = useState('');
+  const [spectatorNameSet, setSpectatorNameSet] = useState(false);
+  const spectatorChatEndRef = useRef<HTMLDivElement>(null);
+
   // Add event to kill feed (auto-remove after 3s)
   const addEvent = useCallback((type: GameEvent['type'], text: string) => {
     const event: GameEvent = { id: `${Date.now()}-${Math.random()}`, type, text, timestamp: Date.now() };
@@ -215,6 +222,10 @@ export default function GamePage() {
 
     newSocket.on('sus_poll_update', (poll: Record<string, number>) => {
       setSusPoll(poll);
+    });
+
+    newSocket.on('spectator_chat', (msg: { id: string; name: string; message: string; timestamp: number }) => {
+      setSpectatorChat(prev => [...prev.slice(-99), msg]);
     });
 
     newSocket.on('agent_died', (data) => {
@@ -432,6 +443,53 @@ export default function GamePage() {
       if (res.ok) setGame(await res.json());
     } catch (e) {
     }
+  };
+
+  // Fetch spectator chat history
+  const fetchSpectatorChat = async () => {
+    try {
+      const res = await fetch(`${API_URL}/api/v1/games/${gameId}/spectator-chat`);
+      if (res.ok) {
+        const data = await res.json();
+        setSpectatorChat(data.messages || []);
+      }
+    } catch (e) {}
+  };
+
+  // Load spectator name from localStorage
+  useEffect(() => {
+    const savedName = localStorage.getItem('spectatorName');
+    if (savedName) {
+      setSpectatorName(savedName);
+      setSpectatorNameSet(true);
+    }
+    fetchSpectatorChat();
+  }, [gameId]);
+
+  // Auto-scroll spectator chat
+  useEffect(() => {
+    spectatorChatEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+  }, [spectatorChat]);
+
+  // Send spectator chat message
+  const sendSpectatorMessage = async () => {
+    if (!spectatorMessage.trim() || !spectatorName.trim()) return;
+    
+    try {
+      const res = await fetch(`${API_URL}/api/v1/games/${gameId}/spectator-chat`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name: spectatorName, message: spectatorMessage })
+      });
+      
+      if (res.ok) {
+        setSpectatorMessage('');
+        if (!spectatorNameSet) {
+          localStorage.setItem('spectatorName', spectatorName);
+          setSpectatorNameSet(true);
+        }
+      }
+    } catch (e) {}
   };
 
   const handleClipSelect = (index: number) => {
@@ -909,21 +967,52 @@ export default function GamePage() {
             </div>
           </div>
 
-          {/* Live Chat Preview */}
-          <div className="bg-black/60 backdrop-blur-sm border-2 border-purple-500/30 rounded-2xl p-4">
+          {/* Spectator Chat */}
+          <div className="bg-black/60 backdrop-blur-sm border-2 border-cyan-500/30 rounded-2xl p-4 flex flex-col">
             <h3 className="text-xs text-gray-500 font-bold uppercase tracking-wider mb-2 flex items-center gap-2">
-              <MessageCircle size={12} className="text-purple-400" />
-              LIVE CHAT
+              <MessageCircle size={12} className="text-cyan-400" />
+              SPECTATOR CHAT
             </h3>
-            <div className="space-y-1.5 max-h-[150px] overflow-y-auto">
-              {chat.length > 0 ? chat.slice(-5).map((msg, i) => (
-                <div key={msg.messageId || i} className="text-xs py-1 border-b border-gray-800/50 last:border-0">
-                  <span className="text-purple-400 font-bold">{msg.agentName}: </span>
-                  <span className="text-gray-300 line-clamp-1">{msg.message}</span>
+            <div className="space-y-1.5 max-h-[120px] overflow-y-auto mb-2 flex-1">
+              {spectatorChat.length > 0 ? spectatorChat.slice(-20).map((msg) => (
+                <div key={msg.id} className="text-xs py-1 border-b border-gray-800/50 last:border-0">
+                  <span className="text-cyan-400 font-bold">{msg.name}: </span>
+                  <span className="text-gray-300">{msg.message}</span>
                 </div>
               )) : (
-                <p className="text-gray-600 text-xs text-center py-2">No messages yet...</p>
+                <p className="text-gray-600 text-xs text-center py-2">Be the first to chat!</p>
               )}
+              <div ref={spectatorChatEndRef} />
+            </div>
+            {/* Chat Input */}
+            <div className="space-y-2">
+              {!spectatorNameSet && (
+                <input
+                  type="text"
+                  value={spectatorName}
+                  onChange={(e) => setSpectatorName(e.target.value.slice(0, 20))}
+                  placeholder="Your name..."
+                  className="w-full bg-gray-900/80 border border-gray-700 rounded-lg px-2 py-1.5 text-xs text-white placeholder-gray-500 focus:border-cyan-500 focus:outline-none"
+                />
+              )}
+              <div className="flex gap-1.5">
+                <input
+                  type="text"
+                  value={spectatorMessage}
+                  onChange={(e) => setSpectatorMessage(e.target.value.slice(0, 200))}
+                  onKeyDown={(e) => e.key === 'Enter' && sendSpectatorMessage()}
+                  placeholder={spectatorNameSet ? "Say something..." : "Enter name first..."}
+                  disabled={!spectatorName.trim()}
+                  className="flex-1 bg-gray-900/80 border border-gray-700 rounded-lg px-2 py-1.5 text-xs text-white placeholder-gray-500 focus:border-cyan-500 focus:outline-none disabled:opacity-50"
+                />
+                <button
+                  onClick={sendSpectatorMessage}
+                  disabled={!spectatorMessage.trim() || !spectatorName.trim()}
+                  className="px-3 py-1.5 bg-cyan-600 hover:bg-cyan-500 disabled:bg-gray-700 disabled:opacity-50 rounded-lg text-xs font-bold transition-colors"
+                >
+                  Send
+                </button>
+              </div>
             </div>
           </div>
 

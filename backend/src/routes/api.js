@@ -1899,4 +1899,69 @@ router.get('/agents/name/:name/achievements', async (req, res) => {
   }
 });
 
+// ========== SPECTATOR CHAT ==========
+
+// Get spectator chat for a game
+router.get('/games/:gameId/spectator-chat', async (req, res) => {
+  try {
+    const { gameId } = req.params;
+    const chatKey = `game:${gameId}:spectator-chat`;
+    
+    const messages = await redis.lRange(chatKey, 0, -1);
+    const parsed = messages.map(m => JSON.parse(m));
+    
+    res.json({
+      messages: parsed,
+      total: parsed.length
+    });
+  } catch (error) {
+    console.error('Get spectator chat error:', error);
+    res.status(500).json({ error: 'Failed to get spectator chat' });
+  }
+});
+
+// Send spectator chat message
+router.post('/games/:gameId/spectator-chat', async (req, res) => {
+  try {
+    const { gameId } = req.params;
+    const { name, message } = req.body;
+    
+    if (!name || !message) {
+      return res.status(400).json({ error: 'Name and message required' });
+    }
+    
+    if (message.length > 500) {
+      return res.status(400).json({ error: 'Message too long (max 500 chars)' });
+    }
+    
+    // Check if game exists
+    const cached = await redis.get(`game:${gameId}`);
+    if (!cached) {
+      return res.status(404).json({ error: 'Game not found' });
+    }
+    
+    const chatMessage = {
+      id: `spec-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+      name: name.slice(0, 30),
+      message: message.trim(),
+      timestamp: Date.now()
+    };
+    
+    // Store in Redis (keep last 100 messages, 2 hour TTL)
+    const chatKey = `game:${gameId}:spectator-chat`;
+    await redis.rPush(chatKey, JSON.stringify(chatMessage));
+    await redis.lTrim(chatKey, -100, -1);
+    await redis.expire(chatKey, 7200);
+    
+    // Broadcast to all spectators
+    const io = req.app.get('io');
+    io.to(`game:${gameId}`).emit('spectator_chat', chatMessage);
+    
+    res.json({ success: true, message: chatMessage });
+  } catch (error) {
+    console.error('Send spectator chat error:', error);
+    res.status(500).json({ error: 'Failed to send message' });
+  }
+});
+
 module.exports = router;
