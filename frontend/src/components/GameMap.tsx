@@ -365,13 +365,18 @@ export default function GameMap({ agents, phase, onChatMessage, votes = [], vote
               {isDead && (
                 <div className="absolute inset-0 flex items-center justify-center">
                   <span 
-                    className="text-2xl"
+                    className="text-2xl w-10 h-10 flex items-center justify-center rounded-full"
                     style={{
-                      filter: agent.status === 'murdered' 
-                        ? 'drop-shadow(0 0 8px #ef4444) drop-shadow(0 0 16px #dc2626)' 
+                      backgroundColor: agent.status === 'murdered' 
+                        ? 'rgba(239, 68, 68, 0.9)' 
                         : agent.status === 'banished'
-                        ? 'drop-shadow(0 0 8px #8b5cf6) drop-shadow(0 0 16px #7c3aed)'
-                        : 'drop-shadow(0 0 8px #facc15)'
+                        ? 'rgba(139, 92, 246, 0.9)'
+                        : 'rgba(250, 204, 21, 0.9)',
+                      boxShadow: agent.status === 'murdered'
+                        ? '0 0 12px #ef4444, 0 0 24px #dc2626'
+                        : agent.status === 'banished'
+                        ? '0 0 12px #8b5cf6, 0 0 24px #7c3aed'
+                        : '0 0 12px #facc15'
                     }}
                   >
                     {agent.status === 'murdered' ? '🔪' : agent.status === 'banished' ? '🗳️' : '⚡'}
