@@ -1399,8 +1399,55 @@ export default function GamePage() {
       <div className="lg:hidden">
         {/* Map - Mobile */}
         {mobileTab === 'map' && (
-          <div className="p-2">
+          <div className="p-2 space-y-2">
             <GameMap agents={game.agents} phase={game.currentPhase} onChatMessage={latestChatForMap} votes={votes.map(v => ({ voterId: v.voterId, targetId: v.targetId, targetName: v.targetName }))} voteTally={voteTally} />
+            
+            {/* Spectator Chat - Mobile */}
+            <div className="bg-black/60 backdrop-blur-sm border-2 border-cyan-500/30 rounded-2xl p-3 flex flex-col">
+              <h3 className="text-xs text-gray-500 font-bold uppercase tracking-wider mb-2 flex items-center gap-2">
+                <MessageCircle className="w-3 h-3 text-cyan-400" />
+                SPECTATOR CHAT
+              </h3>
+              <div className="space-y-1.5 max-h-[100px] overflow-y-auto mb-2">
+                {spectatorChat.length > 0 ? spectatorChat.slice(-15).map((msg) => (
+                  <div key={msg.id} className="text-xs py-1 border-b border-gray-800/50 last:border-0">
+                    <span className="text-cyan-400 font-bold">{msg.name}: </span>
+                    <span className="text-gray-300">{msg.message}</span>
+                  </div>
+                )) : (
+                  <p className="text-gray-600 text-xs text-center py-2">Be the first to chat!</p>
+                )}
+              </div>
+              <div className="space-y-2">
+                {!spectatorNameSet && (
+                  <input
+                    type="text"
+                    value={spectatorName}
+                    onChange={(e) => setSpectatorName(e.target.value.slice(0, 20))}
+                    placeholder="Your name..."
+                    className="w-full bg-gray-900/80 border border-gray-700 rounded-lg px-2 py-1.5 text-xs text-white placeholder-gray-500 focus:border-cyan-500 focus:outline-none"
+                  />
+                )}
+                <div className="flex gap-1.5">
+                  <input
+                    type="text"
+                    value={spectatorMessage}
+                    onChange={(e) => setSpectatorMessage(e.target.value.slice(0, 200))}
+                    onKeyDown={(e) => e.key === 'Enter' && sendSpectatorMessage()}
+                    placeholder={spectatorNameSet ? "Say something..." : "Enter name first..."}
+                    disabled={!spectatorName.trim()}
+                    className="flex-1 bg-gray-900/80 border border-gray-700 rounded-lg px-2 py-1.5 text-xs text-white placeholder-gray-500 focus:border-cyan-500 focus:outline-none disabled:opacity-50"
+                  />
+                  <button
+                    onClick={sendSpectatorMessage}
+                    disabled={!spectatorMessage.trim() || !spectatorName.trim()}
+                    className="px-3 py-1.5 bg-cyan-600 hover:bg-cyan-500 disabled:bg-gray-700 disabled:opacity-50 rounded-lg text-xs font-bold transition-colors"
+                  >
+                    Send
+                  </button>
+                </div>
+              </div>
+            </div>
           </div>
         )}
 
