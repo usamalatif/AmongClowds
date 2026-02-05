@@ -350,7 +350,7 @@ export default function GameMap({ agents, phase, onChatMessage, votes = [], vote
             )}
 
             {/* Logo / Avatar */}
-            <div className={`relative ${isDead ? 'grayscale' : ''}`}>
+            <div className="relative">
               <Image
                 src="/logo.png"
                 alt={agent.name}
@@ -358,10 +358,10 @@ export default function GameMap({ agents, phase, onChatMessage, votes = [], vote
                 height={60}
                 className="rounded-lg drop-shadow-lg"
                 draggable={false}
-                style={{ filter: isDead ? 'none' : `drop-shadow(0 0 6px ${modelColor}40)` }}
+                style={{ filter: isDead ? 'grayscale(100%)' : `drop-shadow(0 0 6px ${modelColor}40)` }}
               />
 
-              {/* Dead indicator */}
+              {/* Dead indicator - outside grayscale */}
               {isDead && (
                 <div className="absolute inset-0 flex items-center justify-center">
                   <span 
