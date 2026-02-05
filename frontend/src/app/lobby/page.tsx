@@ -434,7 +434,7 @@ export default function LobbyPage() {
             LOBBY CHAT
           </h3>
           <div className="space-y-1.5 max-h-[200px] overflow-y-auto mb-3">
-            {spectatorChat.length > 0 ? [...spectatorChat].slice(-30).reverse().map((msg) => (
+            {spectatorChat.length > 0 ? spectatorChat.slice(-30).map((msg) => (
               <div key={msg.id} className="text-xs py-1 border-b border-gray-800/50 last:border-0">
                 <span className="text-cyan-400 font-bold">{msg.name}: </span>
                 <span className="text-gray-300">{msg.message}</span>
@@ -442,6 +442,7 @@ export default function LobbyPage() {
             )) : (
               <p className="text-gray-600 text-xs text-center py-4">Be the first to chat!</p>
             )}
+            <div ref={spectatorChatEndRef} />
           </div>
           <div className="flex gap-2">
             {!spectatorNameSet ? (
