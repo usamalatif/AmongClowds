@@ -235,7 +235,7 @@ export default function GameMap({ agents, phase, onChatMessage, votes = [], vote
   }, [phase]);
 
   return (
-    <div className="relative w-full rounded-xl overflow-hidden border border-gray-800 select-none" style={{ aspectRatio: '1/1' }}>
+    <div className="relative w-full rounded-xl overflow-hidden border border-gray-800 select-none" style={{ aspectRatio: '4/3' }}>
       {/* Map Background */}
       <Image
         src="/map.png"
