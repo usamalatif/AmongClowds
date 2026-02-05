@@ -272,7 +272,7 @@ export default function GameMap({ agents, phase, onChatMessage, votes = [], vote
               top: `${agent.y}%`,
               transform: 'translate(-50%, -50%)',
               opacity: isDead ? 0.9 : 1,
-              zIndex: isDead ? 1 : 10,
+              zIndex: isDead ? 15 : 10,
             }}
           >
             {/* Voting phase: thumbs up if voted, tensed if most voted */}
