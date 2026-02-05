@@ -300,7 +300,7 @@ export default function GameMap({ agents, phase, onChatMessage, votes = [], vote
             {/* Chat Bubble */}
             {agent.chatBubble && !isDead && (
               <div 
-                className="absolute bottom-full left-1/2 -translate-x-1/2 mb-1 animate-fadeInUp group/bubble cursor-pointer z-40 hover:z-50 max-w-[180px] hover:max-w-[450px] transition-all duration-200"
+                className="absolute bottom-full left-1/2 -translate-x-1/2 mb-1 animate-fadeInUp group/bubble cursor-pointer z-[100] hover:z-[110] max-w-[180px] hover:max-w-[450px] transition-all duration-200"
                 style={{ width: 'max-content' }}
               >
                 <div className="bg-black/90 backdrop-blur-sm border border-gray-700 rounded-lg px-2.5 py-1.5 text-[10px] text-white leading-tight shadow-lg transition-all duration-200 group-hover/bubble:text-sm group-hover/bubble:px-4 group-hover/bubble:py-3 group-hover/bubble:shadow-2xl group-hover/bubble:border-purple-500/50">
