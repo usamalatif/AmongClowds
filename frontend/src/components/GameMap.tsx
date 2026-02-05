@@ -363,7 +363,7 @@ export default function GameMap({ agents, phase, onChatMessage, votes = [], vote
 
               {/* Dead indicator - outside grayscale */}
               {isDead && (
-                <div className="absolute inset-0 flex items-center justify-center">
+                <div className="absolute inset-0 flex items-center justify-center z-50">
                   <span 
                     className="text-2xl w-10 h-10 flex items-center justify-center rounded-full"
                     style={{
