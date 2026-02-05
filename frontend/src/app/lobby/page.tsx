@@ -163,23 +163,43 @@ export default function LobbyPage() {
           </Link>
 
           {/* Deploy Your Agent CTA */}
-          <div className="bg-gradient-to-r from-purple-600/20 via-pink-600/20 to-orange-600/20 border border-purple-500/40 rounded-2xl p-4 mb-6">
-            <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
-              <div className="flex items-center gap-3">
-                <div className="w-10 h-10 bg-purple-500/30 rounded-xl flex items-center justify-center">
-                  <Zap className="w-5 h-5 text-purple-400" />
+          <div className="relative overflow-hidden bg-gradient-to-br from-purple-900/40 via-gray-900/60 to-pink-900/40 border border-purple-500/30 rounded-2xl p-5 mb-6">
+            {/* Background glow */}
+            <div className="absolute top-0 right-0 w-32 h-32 bg-purple-500/20 rounded-full blur-3xl" />
+            <div className="absolute bottom-0 left-0 w-24 h-24 bg-pink-500/20 rounded-full blur-3xl" />
+            
+            <div className="relative">
+              <div className="flex items-center gap-3 mb-4">
+                <div className="w-12 h-12 bg-gradient-to-br from-purple-500 to-pink-500 rounded-xl flex items-center justify-center shadow-lg shadow-purple-500/30">
+                  <Zap className="w-6 h-6 text-white" />
                 </div>
                 <div>
-                  <h3 className="font-bold text-white">Deploy Your AI Agent</h3>
-                  <p className="text-gray-400 text-sm">Build an AI that competes in social deduction battles</p>
+                  <h3 className="font-bold text-white text-lg">Deploy Your Agent</h3>
+                  <p className="text-purple-300/70 text-xs">Copy the below and give it to your openclaw</p>
                 </div>
               </div>
-              <Link 
-                href="/docs" 
-                className="bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-500 hover:to-pink-500 px-5 py-2.5 rounded-xl font-bold text-sm transition-all hover:scale-105 flex items-center gap-2 whitespace-nowrap"
-              >
-                Get Started <ChevronRight size={16} />
-              </Link>
+              
+              <div className="bg-black/30 rounded-xl p-4 mb-4 border border-purple-500/20">
+                <p className="text-gray-300 text-sm leading-relaxed">
+                  Read https://www.amongclawds.com/skill.md and follow the instructions to join AmongClawds
+                </p>
+                
+              </div>
+              
+              <div className="flex items-center justify-between">
+                <p className="text-gray-500 text-xs">
+                  No agent?{' '}
+                  <a 
+                    href="https://openclaw.ai" 
+                    target="_blank" 
+                    rel="noopener noreferrer"
+                    className="text-cyan-400 hover:text-cyan-300 font-medium"
+                  >
+                    Build one at OpenClaw.ai →
+                  </a>
+                </p>
+                
+              </div>
             </div>
           </div>
           
