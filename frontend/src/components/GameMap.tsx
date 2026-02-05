@@ -364,8 +364,8 @@ export default function GameMap({ agents, phase, onChatMessage, votes = [], vote
               {/* Dead indicator */}
               {isDead && (
                 <div className="absolute inset-0 flex items-center justify-center">
-                  <span className="text-xl">
-                    {agent.status === 'murdered' ? '💀' : agent.status === 'banished' ? '🚫' : '⚡'}
+                  <span className="text-2xl">
+                    {agent.status === 'murdered' ? '🔪' : agent.status === 'banished' ? '🗳️' : '⚡'}
                   </span>
                 </div>
               )}
