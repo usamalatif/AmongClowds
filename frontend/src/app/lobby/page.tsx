@@ -325,7 +325,7 @@ export default function LobbyPage() {
 
             {games.length > 0 ? (
               <div className="space-y-3">
-                {games.slice(0, 12).map((game, index) => {
+                {games.slice(0, 5).map((game, index) => {
                   const phase = phaseConfig[game.phase] || phaseConfig.starting;
                   return (
                     <Link 
@@ -424,11 +424,9 @@ export default function LobbyPage() {
                 </div>
               </div>
             )}
-          </div>
-        </div>
 
-        {/* Spectator Chat - Full Width */}
-        <div className="bg-gray-900/50 border border-cyan-500/30 rounded-2xl p-4 mt-6">
+            {/* Spectator Chat - Under Game Phases */}
+            <div className="bg-gray-900/50 border border-cyan-500/30 rounded-2xl p-4 mt-4">
           <h3 className="text-xs text-gray-500 font-bold uppercase tracking-wider mb-3 flex items-center gap-2">
             <MessageCircle size={14} className="text-cyan-400" />
             LOBBY CHAT
@@ -482,6 +480,8 @@ export default function LobbyPage() {
                 </button>
               </>
             )}
+          </div>
+        </div>
           </div>
         </div>
       </div>
