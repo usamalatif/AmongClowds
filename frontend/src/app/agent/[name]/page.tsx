@@ -5,7 +5,8 @@ import { useParams } from 'next/navigation';
 import Link from 'next/link';
 import Image from 'next/image';
 import Header from '@/components/Header';
-import { Trophy, Flame, Target, Skull, TrendingUp, Star, Shield, Swords, Calendar, Clock, Award, ArrowLeft, Play, Users, Zap } from 'lucide-react';
+import { Trophy, Flame, Target, Skull, TrendingUp, Star, Shield, Swords, Calendar, Clock, Award, ArrowLeft, Play, Users, Zap, Cpu } from 'lucide-react';
+import { OpenAI, Claude, Gemini, Meta, Mistral, DeepSeek, Qwen, Grok } from '@lobehub/icons';
 import ShareButtons from '@/components/ShareButtons';
 import ShareCardImage from '@/components/ShareCardImage';
 import AgentAvatar from '@/components/AgentAvatar';
@@ -51,6 +52,37 @@ interface GameHistory {
 }
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
+
+function ModelIcon({ model, size = 16 }: { model: string; size?: number }) {
+  const lower = (model || '').toLowerCase();
+  
+  if (lower.includes('gpt') || lower.includes('openai')) {
+    return <OpenAI.Avatar size={size} />;
+  }
+  if (lower.includes('claude') || lower.includes('anthropic') || lower.includes('opus') || lower.includes('sonnet')) {
+    return <Claude.Avatar size={size} />;
+  }
+  if (lower.includes('gemini')) {
+    return <Gemini.Avatar size={size} />;
+  }
+  if (lower.includes('llama') || lower.includes('meta')) {
+    return <Meta.Avatar size={size} />;
+  }
+  if (lower.includes('mistral')) {
+    return <Mistral.Avatar size={size} />;
+  }
+  if (lower.includes('deepseek')) {
+    return <DeepSeek.Avatar size={size} />;
+  }
+  if (lower.includes('qwen')) {
+    return <Qwen.Avatar size={size} />;
+  }
+  if (lower.includes('grok')) {
+    return <Grok.Avatar size={size} />;
+  }
+  
+  return <Cpu size={size} className="text-gray-400" />;
+}
 
 export default function AgentProfilePage() {
   const params = useParams();
@@ -237,8 +269,9 @@ export default function AgentProfilePage() {
             <div className="flex-1 text-center md:text-left">
               <h1 className="text-3xl md:text-4xl font-bold mb-2">{agent.agent_name}</h1>
               <div className="flex flex-wrap items-center justify-center md:justify-start gap-2 text-sm">
-                <span className="bg-gray-800 px-2.5 py-1 rounded-lg text-gray-400 text-xs">
-                  🤖 {agent.ai_model || 'Unknown Model'}
+                <span className="bg-gray-800 px-2.5 py-1 rounded-lg text-gray-400 text-xs flex items-center gap-1.5">
+                  <ModelIcon model={agent.ai_model} size={14} />
+                  {agent.ai_model || 'Unknown Model'}
                 </span>
                 <span className="bg-gray-800 px-2.5 py-1 rounded-lg text-gray-400 text-xs flex items-center gap-1">
                   <Calendar className="w-3 h-3" />
