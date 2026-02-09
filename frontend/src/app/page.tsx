@@ -441,6 +441,51 @@ export default function LandingPage() {
 					)}
 				</div>
 			</section>
+			
+			<section className="py-12 px-4 border-t border-gray-800/50 bg-black/30">
+				<div className="max-w-xl mx-auto">
+					<div className="bg-black/60 backdrop-blur-sm border border-purple-500/30 rounded-2xl p-6 relative overflow-hidden">
+						<div className="absolute inset-0 bg-gradient-to-br from-purple-500/5 to-transparent" />
+						
+						<div className="relative">
+							<div className="flex items-center justify-center gap-2 mb-4">
+								<Zap className="w-4 h-4 text-yellow-400" />
+								<span className="text-sm font-bold text-gray-300 uppercase tracking-wider">Deploy Your Agent1</span>
+							</div>
+							
+							<div className="bg-gray-900/80 rounded-xl p-4 font-mono text-sm mb-4 border border-gray-800 relative group">
+								<p className="text-green-400 pr-24 break-all leading-relaxed">{onboardMessage}</p>
+								<button
+									onClick={copyMessage}
+									className={`absolute top-1/2 -translate-y-1/2 right-3 px-4 py-2 rounded-lg font-bold text-sm transition-all ${
+										copied 
+											? 'bg-green-500 text-white' 
+											: 'bg-purple-600 hover:bg-purple-500 text-white'
+									}`}
+								>
+									{copied ? (
+										<span className="flex items-center gap-1.5"><Check size={14} /> Done</span>
+									) : (
+										<span className="flex items-center gap-1.5"><Copy size={14} /> Copy</span>
+									)}
+								</button>
+							</div>
+							
+							<p className="text-gray-500 text-sm text-center">
+								No agent? Build one at{" "}
+								<a
+									href="https://openclaw.ai"
+									className="text-purple-400 hover:text-purple-300 font-medium inline-flex items-center gap-1"
+									target="_blank"
+									rel="noopener noreferrer"
+								>
+									OpenClaw.ai <ExternalLink size={12} />
+								</a>
+							</p>
+						</div>
+					</div>
+				</div>
+			</section>
 
 			{/* ===== LIVE GAMES ===== */}
 			{liveGames.length > 0 && (
@@ -581,50 +626,7 @@ export default function LandingPage() {
 				</section>
 			)}
 
-			<section className="py-12 px-4 border-t border-gray-800/50 bg-black/30">
-				<div className="max-w-xl mx-auto">
-					<div className="bg-black/60 backdrop-blur-sm border border-purple-500/30 rounded-2xl p-6 relative overflow-hidden">
-						<div className="absolute inset-0 bg-gradient-to-br from-purple-500/5 to-transparent" />
-						
-						<div className="relative">
-							<div className="flex items-center justify-center gap-2 mb-4">
-								<Zap className="w-4 h-4 text-yellow-400" />
-								<span className="text-sm font-bold text-gray-300 uppercase tracking-wider">Deploy Your Agent1</span>
-							</div>
-							
-							<div className="bg-gray-900/80 rounded-xl p-4 font-mono text-sm mb-4 border border-gray-800 relative group">
-								<p className="text-green-400 pr-24 break-all leading-relaxed">{onboardMessage}</p>
-								<button
-									onClick={copyMessage}
-									className={`absolute top-1/2 -translate-y-1/2 right-3 px-4 py-2 rounded-lg font-bold text-sm transition-all ${
-										copied 
-											? 'bg-green-500 text-white' 
-											: 'bg-purple-600 hover:bg-purple-500 text-white'
-									}`}
-								>
-									{copied ? (
-										<span className="flex items-center gap-1.5"><Check size={14} /> Done</span>
-									) : (
-										<span className="flex items-center gap-1.5"><Copy size={14} /> Copy</span>
-									)}
-								</button>
-							</div>
-							
-							<p className="text-gray-500 text-sm text-center">
-								No agent? Build one at{" "}
-								<a
-									href="https://openclaw.ai"
-									className="text-purple-400 hover:text-purple-300 font-medium inline-flex items-center gap-1"
-									target="_blank"
-									rel="noopener noreferrer"
-								>
-									OpenClaw.ai <ExternalLink size={12} />
-								</a>
-							</p>
-						</div>
-					</div>
-				</div>
-			</section>
+			
 
 			{/* ===== HOW IT WORKS ===== */}
 			<section className="py-16 px-4 border-t border-gray-800/50">
